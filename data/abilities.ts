@@ -686,23 +686,25 @@ export const Abilities: {[abilityid: string]: AbilityData} = {
 	},
 	cudchew: {
 		onEatItem(item, pokemon) {
-			if (!item.isBerry) return;
-			pokemon.abilityState.berry = item;
-			pokemon.addVolatile('cudchew');
+			if (item.isBerry) {
+				pokemon.addVolatile('cudchew');
+				pokemon.volatiles['cudchew'].berry = item;
+			}
 		},
 		condition: {
 			noCopy: true,
 			duration: 2,
+			onResidualOrder: 28,
+			onResidualSubOrder: 2,
 			onEnd(pokemon) {
-				if (pokemon.hp && pokemon.abilityState.berry) {
-					const item = pokemon.abilityState.berry;
+				if (pokemon.hp) {
+					const item = this.effectState.berry;
 					this.add('-activate', pokemon, 'ability: Cud Chew');
-					this.add('-enditem', pokemon, item.name);
+					this.add('-enditem', pokemon, item.name, '[eat]');
 					if (this.singleEvent('Eat', item, null, pokemon, null, null)) {
 						this.runEvent('EatItem', pokemon, null, null, item);
 					}
 					if (item.onEat) pokemon.ateBerry = true;
-					delete pokemon.abilityState.berry;
 				}
 			},
 		},
@@ -2753,13 +2755,14 @@ export const Abilities: {[abilityid: string]: AbilityData} = {
 	},
 	orichalcumpulse: {
 		onStart(pokemon) {
-			if (!this.field.setWeather('sunnyday') && pokemon.effectiveWeather() === 'sunnyday') {
+			// not affected by Utility Umbrella
+			if (!this.field.setWeather('sunnyday') && this.field.effectiveWeather() === 'sunnyday') {
 				this.add('-activate', pokemon, 'ability: Orichalcum Pulse');
 			}
 		},
 		onWeatherChange(pokemon) {
 			if (pokemon === this.field.weatherState.source) return;
-			if (pokemon.effectiveWeather() === 'sunnyday') {
+			if (this.field.effectiveWeather() === 'sunnyday') {
 				this.add('-activate', pokemon, 'ability: Orichalcum Pulse');
 			}
 		},
@@ -3168,7 +3171,8 @@ export const Abilities: {[abilityid: string]: AbilityData} = {
 		},
 		onWeatherChange(pokemon) {
 			if (pokemon.transformed) return;
-			if (pokemon.effectiveWeather() === 'sunnyday') {
+			// protosynthesis is not affected by Utility Umbrella
+			if (this.field.effectiveWeather() === 'sunnyday') {
 				if (!pokemon.volatiles['protosynthesis']) {
 					this.add('-activate', pokemon, 'ability: Protosynthesis');
 					pokemon.addVolatile('protosynthesis');
@@ -4297,8 +4301,13 @@ export const Abilities: {[abilityid: string]: AbilityData} = {
 		onStart(pokemon) {
 			if (pokemon.side.totalFainted) {
 				this.add('-activate', pokemon, 'ability: Supreme Overlord');
-				this.effectState.fallen = Math.min(pokemon.side.totalFainted, 5);
+				const fallen = Math.min(pokemon.side.totalFainted, 5);
+				this.add('-start', pokemon, `fallen${fallen}`, '[silent]');
+				this.effectState.fallen = fallen;
 			}
+		},
+		onEnd(pokemon) {
+			this.add('-end', pokemon, `fallen${this.effectState.fallen}`, '[silent]');
 		},
 		onBasePowerPriority: 21,
 		onBasePower(basePower, attacker, defender, move) {
