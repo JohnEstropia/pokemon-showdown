@@ -137,7 +137,7 @@ export const Rulesets: {[k: string]: FormatData} = {
 		name: 'Draft',
 		desc: "The custom Draft League ruleset",
 		ruleset: [
-			'Obtainable', '+Unreleased', '+CAP', 'Team Preview', 'Sleep Clause Mod', 'OHKO Clause', 'Evasion Moves Clause', 'Endless Battle Clause', 'HP Percentage Mod', 'Cancel Mod',
+			'Obtainable', '+Unreleased', '+CAP', 'Sketch Post-Gen 7 Moves', 'Team Preview', 'Sleep Clause Mod', 'OHKO Clause', 'Evasion Moves Clause', 'Endless Battle Clause', 'HP Percentage Mod', 'Cancel Mod',
 		],
 		// timer: {starting: 60 * 60, grace: 0, addPerTurn: 10, maxPerTurn: 100, timeoutAutoChoose: true},
 	},
@@ -2332,6 +2332,19 @@ export const Rulesets: {[k: string]: FormatData} = {
 			}
 			newSpecies.bst += newSpecies.baseStats[stat];
 			return newSpecies;
+		},
+	},
+	voltturnmayhemmod: {
+		effectType: 'Rule',
+		name: "VoltTurn Mayhem Mod",
+		desc: `Every move that targets a foe causes the user to switch out after use.`,
+		onBegin() {
+			this.add('rule', 'VoltTurn Mayhem Mod: Every move that targets a foe causes the user to switch out after use');
+		},
+		onModifyMove(move, source, target) {
+			const validTargets = ['adjacentFoe', 'allAdjacent', 'allAdjacentFoes', 'any', 'normal', 'randomNormal', 'scripted'];
+			if (!validTargets.includes(move.target)) return;
+			move.selfSwitch = true;
 		},
 	},
 };
