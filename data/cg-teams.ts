@@ -58,6 +58,9 @@ async function updateLevels(database: SQL.DatabaseManager) {
 	const updateSpecies = await database.prepare(
 		'UPDATE gen9computergeneratedteams SET wins = 0, losses = 0, level = ? WHERE species_id = ?'
 	);
+	const updateHistory = await database.prepare(
+		`INSERT INTO gen9_historical_levels (level, species_id, timestamp) VALUES (?, ?, ${Date.now()})`
+	);
 	const data = await database.all('SELECT species_id, wins, losses, level FROM gen9computergeneratedteams');
 	for (let {species_id, wins, losses, level} of data) {
 		const total = wins + losses;
@@ -67,6 +70,7 @@ async function updateLevels(database: SQL.DatabaseManager) {
 			if (wins / total <= 0.45) level++;
 			level = Math.max(1, Math.min(100, level));
 			await updateSpecies?.run([level, species_id]);
+			await updateHistory?.run([level, species_id]);
 		}
 
 		levelOverride[species_id] = level;
@@ -135,10 +139,30 @@ export default class TeamGenerator {
 		const ability = this.weightedRandomPick(abilityPool, abilityWeights);
 
 		const moves: Move[] = [];
-		const learnset = this.dex.species.getLearnset(this.dex.species.get(species.baseSpecies).id);
-		let movePool = [];
-		for (const moveid in learnset) {
-			if (learnset[moveid].some(source => source.startsWith('9'))) movePool.push(moveid);
+
+		let learnset = this.dex.species.getLearnset(species.id);
+		let movePool: string[] = [];
+		if (!learnset) {
+			learnset = this.dex.species.getLearnset(this.dex.species.get(species.baseSpecies).id);
+		}
+		if (learnset) {
+			movePool = Object.keys(learnset).filter(
+				moveid => learnset![moveid].find(learned => learned.startsWith('9'))
+			);
+		}
+		if (species.changesFrom) {
+			learnset = this.dex.species.getLearnset(toID(species.changesFrom));
+			const basePool = Object.keys(learnset!).filter(
+				moveid => learnset![moveid].find(learned => learned.startsWith('9'))
+			);
+			movePool = [...new Set(movePool.concat(basePool))];
+		}
+		if (species.baseSpecies) {
+			for (const moveid in learnset) {
+				if (!movePool.includes(moveid) && learnset[moveid].some(source => source.startsWith('9'))) {
+					movePool.push(moveid);
+				}
+			}
 		}
 		if (!movePool.length) throw new Error(`No moves for ${species.id}`);
 
@@ -265,11 +289,17 @@ export default class TeamGenerator {
 				if (stats.typeWeaknesses[type.name] === undefined) {
 					stats.typeWeaknesses[type.name] = 0;
 				}
-				stats.typeWeaknesses[type.name]++;
-				if (stats.typeWeaknesses[type.name] > MAX_WEAK_TO_SAME_TYPE) {
+				if (stats.typeWeaknesses[type.name] >= MAX_WEAK_TO_SAME_TYPE) {
 					// too many weaknesses to this type
 					return false;
 				}
+			}
+		}
+		// species passes; increment counters
+		for (const type of this.dex.types.all()) {
+			const effectiveness = this.dex.getEffectiveness(type.name, species.types);
+			if (effectiveness === 1) {
+				stats.typeWeaknesses[type.name]++;
 			}
 		}
 		return true;
@@ -303,12 +333,12 @@ export default class TeamGenerator {
 			let weight = 2500;
 
 			// inflicts status
-			if (move.status) weight *= TeamGenerator.statusWeight(move.status);
+			if (move.status) weight *= TeamGenerator.statusWeight(move.status) * 2;
 
 			// hazard setters: very important, but we don't need 2 pokemon to set the same hazard on a team
 			const isHazard = (m: Move) => m.sideCondition && m.target === 'foeSide';
 			if (isHazard(move) && (teamStats.hazardSetters[move.id] || 0) < 1) {
-				weight *= move.id === 'spikes' ? 6 : 8;
+				weight *= move.id === 'spikes' ? 12 : 16;
 
 				// if we are ALREADY setting hazards, setting MORE is really good
 				if (movesSoFar.some(m => isHazard(m))) weight *= 2;
@@ -316,20 +346,20 @@ export default class TeamGenerator {
 			}
 
 			// boosts
-			weight *= this.boostWeight(move, movesSoFar, species);
-			weight *= this.opponentDebuffWeight(move);
+			weight *= this.boostWeight(move, movesSoFar, species) * 2;
+			weight *= this.opponentDebuffWeight(move) * 2;
 
 			// protection moves - useful for bulky/stally pokemon
 			if (species.baseStats.def >= 100 || species.baseStats.spd >= 100 || species.baseStats.hp >= 100) {
 				switch (move.volatileStatus) {
 				case 'endure':
-					weight *= 1.5;
+					weight *= 3;
 					break;
 				case 'protect': case 'kingsshield': case 'silktrap':
-					weight *= 2;
+					weight *= 4;
 					break;
 				case 'banefulbunker': case 'spikyshield':
-					weight *= 2.5;
+					weight *= 5;
 					break;
 				default:
 					break;
@@ -363,6 +393,7 @@ export default class TeamGenerator {
 		// STAB
 		if (species.types.includes(move.type)) powerEstimate *= ability === 'Adaptability' ? 2 : 1.5;
 		if (ability === 'Technician' && move.basePower <= 60) powerEstimate *= 1.5;
+		if (ability === 'Steely Spirit' && move.type === 'Steel') powerEstimate *= 1.5;
 		if (move.multihit) {
 			const numberOfHits = Array.isArray(move.multihit) ?
 				(ability === 'Skill Link' ? move.multihit[1] : (move.multihit[0] + move.multihit[1]) / 2) :
