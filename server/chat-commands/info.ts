@@ -261,7 +261,7 @@ export const commands: Chat.ChatCommands = {
 		} else if (user === targetUser) {
 			buf += `<br /> IP: <a href="https://whatismyipaddress.com/ip/${connection.ip}" target="_blank">${connection.ip}</a>`;
 		}
-		if (canViewAlts && hiddenrooms) {
+		if ((user === targetUser || canViewAlts) && hiddenrooms) {
 			buf += `<br />Hidden rooms: ${hiddenrooms}`;
 		}
 		if (canViewSecretRooms && privaterooms) {
@@ -2107,7 +2107,7 @@ export const commands: Chat.ChatCommands = {
 		const ability = Dex.abilities.get(targets[0]);
 		const format = Dex.formats.get(targets[0]);
 		let atLeastOne = false;
-		let generation = (targets[1] || 'ss').trim().toLowerCase();
+		let generation = (targets[1] || 'sv').trim().toLowerCase();
 		let genNumber = 9;
 		const extraFormat = Dex.formats.get(targets[2]);
 
@@ -2981,7 +2981,7 @@ export const pages: Chat.PageTable = {
 		for (const id of userids) {
 			const ips = useridToIp.get(id) || [];
 			buf += `<tr><td>`;
-			buf += `<a href="https://${Config.routes.client}/users/${id}">${id}</a></td>`;
+			buf += `<a href="https://${Config.routes.root}/users/${id}">${id}</a></td>`;
 			const ipStr = ips.map(f => `<a href="https://whatismyipaddress.com/ip/${f}">${f}</a>`).join(', ');
 			buf += `${showIPs ? `<td>${ipStr}</td>` : ""}</tr>`;
 		}
@@ -3003,7 +3003,7 @@ export const pages: Chat.PageTable = {
 		const basics = [
 			`<p>Pok&eacute;mon Showdown! supports custom rules in three ways:</p>`,
 			`<ul><li>Challenging another user, using the command <code>/challenge USERNAME, FORMAT @@@ RULES</code></li>`,
-			`<li>Tournaments, using the command <code>/tour rules RULES</code> (see the <a href="${tourHelp}">Tournament command help)</a></li>`,
+			`<li>Tournaments, using the command <code>/tour rules RULES</code> (see the <a href="${tourHelp}">Tournament command help</a>)</li>`,
 			`<li>Custom rules on your own server</li></ul>`,
 			`<h2><u>Bans</u></h2>`,
 			`<p>Bans are just a <code>-</code> followed by the thing you want to ban.</p>`,

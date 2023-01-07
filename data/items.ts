@@ -4496,6 +4496,7 @@ export const Items: {[itemid: string]: ItemData} = {
 				return this.chainModify([4506, 4096]);
 			}
 		},
+		onModifyMovePriority: 1,
 		onModifyMove(move) {
 			if (move.flags['punch']) delete move.flags['contact'];
 		},
@@ -4835,7 +4836,7 @@ export const Items: {[itemid: string]: ItemData} = {
 		onAnyPseudoWeatherChange() {
 			const pokemon = this.effectState.target;
 			if (this.field.getPseudoWeather('trickroom')) {
-				pokemon.useItem();
+				pokemon.useItem(pokemon);
 			}
 		},
 		boosts: {

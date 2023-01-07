@@ -2383,8 +2383,8 @@ export const MovesText: {[k: string]: MoveText} = {
 	},
 	glaiverush: {
 		name: "Glaive Rush",
-		desc: "If this move is successful, moves targeted at the user deal double damage and do not check accuracy until the end of the next turn.",
-		shortDesc: "Opp 2x damage, sure-hit until end of next turn.",
+		desc: "If this move is successful, moves targeted at the user deal double damage and do not check accuracy until the user's next turn.",
+		shortDesc: "User takes sure-hit 2x damage until its next turn.",
 	},
 	glare: {
 		name: "Glare",
@@ -6575,6 +6575,9 @@ export const MovesText: {[k: string]: MoveText} = {
 		name: "Teatime",
 		desc: "All active Pokemon consume their held Berries. This effect is not prevented by substitutes, the Klutz or Unnerve Abilities, or the effects of Embargo or Magic Room. Fails if no active Pokemon is holding a Berry.",
 		shortDesc: "All active Pokemon consume held Berries.",
+
+		activate: "  It's teatime! Everyone dug in to their Berries!",
+		fail: "  But nothing happened!",
 	},
 	technoblast: {
 		name: "Techno Blast",

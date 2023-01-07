@@ -3857,15 +3857,24 @@ export const Moves: {[moveid: string]: MoveData} = {
 		priority: 0,
 		flags: {},
 		onHit(target, source, move) {
-			let overallSuccess;
-			for (const ally of source.alliesAndSelf()) {
-				let allySuccess: ReturnType<Pokemon['setAbility']> | true = ally.setAbility(target.ability);
-				if (typeof allySuccess === 'string') allySuccess = true;
-				overallSuccess = this.actions.combineResults(overallSuccess, allySuccess);
-				if (!allySuccess) continue;
-				this.add('-ability', ally, target.getAbility().name, '[from] move: Doodle');
+			let success: boolean | null = false;
+			for (const pokemon of source.alliesAndSelf()) {
+				if (pokemon.ability === target.ability) continue;
+				const oldAbility = pokemon.setAbility(target.ability);
+				if (oldAbility) {
+					this.add('-ability', pokemon, target.getAbility().name, '[from] move: Doodle');
+					success = true;
+				} else if (!success && oldAbility === null) {
+					success = null;
+				}
 			}
-			return overallSuccess;
+			if (!success) {
+				if (success === false) {
+					this.add('-fail', source);
+				}
+				this.attrLastMove('[still]');
+				return this.NOT_FAIL;
+			}
 		},
 		secondary: null,
 		target: "adjacentFoe",
@@ -6663,11 +6672,15 @@ export const Moves: {[moveid: string]: MoveData} = {
 		onDisableMove(pokemon) {
 			if (pokemon.lastMove?.id === 'gigatonhammer') pokemon.disableMove('gigatonhammer');
 		},
-		onUseMoveMessage(source) {
-			if (source.lastMove?.id === 'gigatonhammer') {
+		beforeMoveCallback(pokemon) {
+			if (pokemon.lastMove?.id === 'gigatonhammer') pokemon.addVolatile('gigatonhammer');
+		},
+		onAfterMove(pokemon) {
+			if (pokemon.removeVolatile('gigatonhammer')) {
 				this.add('-hint', "Some effects can force a Pokemon to use Gigaton Hammer again in a row.");
 			}
 		},
+		condition: {},
 		secondary: null,
 		target: "normal",
 		type: "Steel",
@@ -6735,15 +6748,19 @@ export const Moves: {[moveid: string]: MoveData} = {
 		},
 		condition: {
 			noCopy: true,
-			duration: 2,
-			onRestart() {
-				this.effectState.duration = 2;
+			onStart(pokemon) {
+				this.add('-singlemove', pokemon, 'Glaive Rush', '[silent]');
 			},
 			onAccuracy() {
 				return true;
 			},
 			onSourceModifyDamage() {
 				return this.chainModify(2);
+			},
+			onBeforeMovePriority: 100,
+			onBeforeMove(pokemon) {
+				this.debug('removing Glaive Rush drawback before attack');
+				pokemon.removeVolatile('glaiverush');
 			},
 		},
 		secondary: null,
@@ -18660,12 +18677,11 @@ export const Moves: {[moveid: string]: MoveData} = {
 			if (!pokemon.getItem().isBerry) pokemon.disableMove('stuffcheeks');
 		},
 		onTry(source) {
-			const item = source.getItem();
-			if (item.isBerry && source.eatItem(true)) {
-				this.boost({def: 2}, source, null, null, false, true);
-			} else {
-				return false;
-			}
+			return source.getItem().isBerry;
+		},
+		onHit(pokemon) {
+			if (!this.boost({def: 2})) return null;
+			pokemon.eatItem(true);
 		},
 		secondary: null,
 		target: "self",
@@ -19411,21 +19427,23 @@ export const Moves: {[moveid: string]: MoveData} = {
 		priority: 0,
 		flags: {bypasssub: 1},
 		onHitField(target, source, move) {
-			let result = false;
-			for (const active of this.getAllActive()) {
-				if (this.runEvent('Invulnerability', active, source, move) === false) {
-					this.add('-miss', source, active);
-					result = true;
-				} else if (this.runEvent('TryHit', active, source, move)) {
-					const item = active.getItem();
-					if (active.hp && item.isBerry) {
-						// bypasses Unnerve
-						active.eatItem(true);
-						result = true;
-					}
+			const targets: Pokemon[] = [];
+			for (const pokemon of this.getAllActive()) {
+				if (this.runEvent('Invulnerability', pokemon, source, move) === false) {
+					this.add('-miss', source, pokemon);
+				} else if (this.runEvent('TryHit', pokemon, source, move) && pokemon.getItem().isBerry) {
+					targets.push(pokemon);
 				}
 			}
-			return result;
+			this.add('-fieldactivate', 'move: Teatime');
+			if (!targets.length) {
+				this.add('-fail', source, 'move: Teatime');
+				this.attrLastMove('[still]');
+				return this.NOT_FAIL;
+			}
+			for (const pokemon of targets) {
+				pokemon.eatItem(true);
+			}
 		},
 		secondary: null,
 		target: "all",
