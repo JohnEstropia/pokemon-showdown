@@ -1614,6 +1614,22 @@ export const Rulesets: {[k: string]: FormatData} = {
 		name: 'Open Team Sheets',
 		desc: "Allows each player to see the Pok&eacute;mon and all non-stat information about them, before they choose their lead Pok&eacute;mon",
 		onTeamPreview() {
+			const msg = 'uhtml|otsrequest|<button name="send" value="/acceptopenteamsheets" class="button" style="margin-right: 10px;"><strong>Accept Open Team Sheets</strong></button><button name="send" value="/rejectopenteamsheets" class="button" style="margin-top: 10px"><strong>Deny Open Team Sheets</strong></button>';
+			for (const side of this.sides) {
+				this.addSplit(side.id, [msg]);
+			}
+		},
+		onBattleStart() {
+			for (const side of this.sides) {
+				this.addSplit(side.id, ['uhtmlchange|otsrequest|']);
+			}
+		},
+	},
+	forceopenteamsheets: {
+		effectType: 'Rule',
+		name: 'Force Open Team Sheets',
+		desc: "Allows each player to see the Pok&eacute;mon and all non-stat information about them, before they choose their lead Pok&eacute;mon",
+		onTeamPreview() {
 			let buf = 'raw|';
 			for (const side of this.sides) {
 				buf += Utils.html`<div class="infobox" style="margin-top:5px"><details><summary>Open Team Sheet for ${side.name}</summary>${Teams.export(side.team, {hideStats: true})}</details></div>`;
@@ -2347,6 +2363,40 @@ export const Rulesets: {[k: string]: FormatData} = {
 			const validTargets = ['adjacentFoe', 'allAdjacent', 'allAdjacentFoes', 'any', 'normal', 'randomNormal', 'scripted'];
 			if (!validTargets.includes(move.target)) return;
 			move.selfSwitch = true;
+		},
+	},
+	convergencelegality: {
+		effectType: 'ValidatorRule',
+		name: "Convergence Legality",
+		desc: `Allows all Pok&eacute;mon that have identical types to share moves and abilities.`,
+		onValidateSet(set, format) {
+			const curSpecies = this.dex.species.get(set.species);
+			const obtainableAbilityPool = new Set<string>();
+			const matchingSpecies = this.dex.species.all()
+				.filter(species => (
+					!species.isNonstandard && species.types.every(type => curSpecies.types.includes(type)) &&
+					species.types.length === curSpecies.types.length
+				));
+			for (const species of matchingSpecies) {
+				for (const abilityName of Object.values(species.abilities)) {
+					const abilityid = this.toID(abilityName);
+					if (this.ruleTable.isRestricted(`ability:${abilityid}`)) continue;
+					obtainableAbilityPool.add(abilityid);
+				}
+			}
+			if (!obtainableAbilityPool.has(this.toID(set.ability))) {
+				return [`${curSpecies.name} doesn't have access to ${this.dex.abilities.get(set.ability).name}.`];
+			}
+		},
+		checkCanLearn(move, species, setSources, set) {
+			const matchingSpecies = this.dex.species.all()
+				.filter(s => (
+					!s.isNonstandard && s.types.every(type => species.types.includes(type)) &&
+					s.types.length === species.types.length
+				));
+			const someCanLearn = matchingSpecies.some(s => this.checkCanLearn(move, s, setSources, set) === null);
+			if (someCanLearn && !this.ruleTable.isRestricted(`move:${move.id}`)) return null;
+			return this.checkCanLearn(move, species, setSources, set);
 		},
 	},
 };

@@ -363,11 +363,11 @@ export class RandomGen5Teams extends RandomGen6Teams {
 		if (
 			ability === 'Poison Heal' ||
 			ability === 'Toxic Boost' ||
-			(ability === 'Quick Feet' && moves.has('facade')) ||
-			moves.has('psychoshift')
+			(ability === 'Quick Feet' && moves.has('facade'))
 		) {
 			return 'Toxic Orb';
 		}
+		if (moves.has('psychoshift')) return 'Flame Orb';
 		if (moves.has('rest') && !moves.has('sleeptalk') && ability !== 'Natural Cure' && ability !== 'Shed Skin') {
 			return 'Chesto Berry';
 		}
@@ -608,7 +608,9 @@ export class RandomGen5Teams extends RandomGen6Teams {
 							(counter.get('Status') || (species.nfe && !!counter.get('Status'))) &&
 							(['recover', 'roost', 'slackoff', 'softboiled'].some(m => movePool.includes(m)))
 						) || (
+							(movePool.includes('moonlight') && types.size < 2 && !moves.has('trickroom')) ||
 							movePool.includes('darkvoid') ||
+							movePool.includes('milkdrink') ||
 							movePool.includes('quiverdance') ||
 							(species.requiredMove && movePool.includes(toID(species.requiredMove)))
 						) || (
@@ -716,6 +718,7 @@ export class RandomGen5Teams extends RandomGen6Teams {
 			} else if (abilities.has('Swift Swim') && moves.has('raindance')) {
 				ability = 'Swift Swim';
 			}
+			if (species.name === 'Altaria') ability = 'Natural Cure';
 		} else {
 			ability = abilityData[0].name;
 		}
@@ -808,6 +811,7 @@ export class RandomGen5Teams extends RandomGen6Teams {
 		const tierCount: {[k: string]: number} = {};
 		const typeCount: {[k: string]: number} = {};
 		const typeComboCount: {[k: string]: number} = {};
+		const typeWeaknesses: {[k: string]: number} = {};
 		const teamDetails: RandomTeamsTypes.TeamDetails = {};
 
 		const pokemonPool = this.getPokemonPool(type, pokemon, isMonotype);
@@ -856,6 +860,19 @@ export class RandomGen5Teams extends RandomGen6Teams {
 					}
 				}
 				if (skip) continue;
+
+				// Limit three weak to any type
+				for (const typeName of this.dex.types.names()) {
+					// it's weak to the type
+					if (this.dex.getEffectiveness(typeName, species) > 0) {
+						if (!typeWeaknesses[typeName]) typeWeaknesses[typeName] = 0;
+						if (typeWeaknesses[typeName] >= 3 * limitFactor) {
+							skip = true;
+							break;
+						}
+					}
+				}
+				if (skip) continue;
 			}
 
 			// Limit one of any type combination, two in Monotype
@@ -900,6 +917,14 @@ export class RandomGen5Teams extends RandomGen6Teams {
 				typeComboCount[typeCombo]++;
 			} else {
 				typeComboCount[typeCombo] = 1;
+			}
+
+			// Increment weakness counter
+			for (const typeName of this.dex.types.names()) {
+				// it's weak to the type
+				if (this.dex.getEffectiveness(typeName, species) > 0) {
+					typeWeaknesses[typeName]++;
+				}
 			}
 
 			// Team details

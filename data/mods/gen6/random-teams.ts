@@ -10,7 +10,8 @@ export class RandomGen6Teams extends RandomGen7Teams {
 		this.noStab = [...this.noStab, 'aquajet', 'fakeout', 'iceshard', 'machpunch', 'quickattack', 'vacuumwave'];
 
 		this.moveEnforcementCheckers = {
-			Bug: movePool => movePool.includes('megahorn') || movePool.includes('pinmissile'),
+			Bug: (movePool, moves, abilities, types, counter) => (['megahorn', 'pinmissile'].some(m => movePool.includes(m)) ||
+				!counter.get('Bug') && abilities.has('Tinted Lens')),
 			Dark: (movePool, moves, abilities, types, counter, species) => (
 				(!counter.get('Dark') && !abilities.has('Protean'))
 			),
@@ -32,7 +33,8 @@ export class RandomGen6Teams extends RandomGen7Teams {
 					!!counter.setupType || !counter.get('Status')
 				)
 			),
-			Fire: (movePool, moves, abilities, types, counter) => !counter.get('Fire') || movePool.includes('quiverdance'),
+			Fire: (movePool, moves, abilities, types, counter) => !counter.get('Fire') ||
+				['eruption', 'quiverdance'].some(m => movePool.includes(m)),
 			Flying: (movePool, moves, abilities, types, counter) => (
 				!counter.get('Flying') && (
 					abilities.has('Gale Wings') ||
@@ -104,6 +106,12 @@ export class RandomGen6Teams extends RandomGen7Teams {
 			return {cull: !counter.get('recovery') && !moves.has('rest')};
 		case 'focuspunch':
 			return {cull: !moves.has('substitute') || counter.damagingMoves.size < 2};
+		case 'lightscreen':
+			if (movePool.length > 1) {
+				const screen = movePool.indexOf('reflect');
+				if (screen >= 0) this.fastPop(movePool, screen);
+			}
+			return {cull: !moves.has('reflect')};
 		case 'perishsong':
 			return {cull: !moves.has('protect')};
 		case 'reflect':
@@ -134,7 +142,7 @@ export class RandomGen6Teams extends RandomGen7Teams {
 					(!moves.has('growth') || moves.has('sunnyday'))
 				)
 			), isSetup: true};
-		case 'calmmind': case 'geomancy': case 'nastyplot': case 'quiverdance': case 'tailglow':
+		case 'calmmind': case 'geomancy': case 'nastyplot': case 'tailglow':
 			if (types.has('Dark') && moves.has('darkpulse')) {
 				counter.setupType = 'Special';
 				return {cull: false, isSetup: true};
@@ -144,6 +152,8 @@ export class RandomGen6Teams extends RandomGen7Teams {
 				counter.get('specialsetup') > 1 ||
 				(counter.get('Special') + counter.get('specialpool') < 2 && (!moves.has('rest') || !moves.has('sleeptalk')))
 			), isSetup: true};
+		case 'quiverdance':
+			return {cull: false, isSetup: true};
 		case 'growth': case 'shellsmash': case 'workup':
 			return {cull: (
 				counter.setupType !== 'Mixed' ||
@@ -556,7 +566,7 @@ export class RandomGen6Teams extends RandomGen7Teams {
 		case 'Torrent':
 			return (!counter.get('Water') || !!species.isMega);
 		case 'Unaware':
-			return (!!counter.setupType || moves.has('stealthrock'));
+			return (!!counter.setupType || species.id === 'clefable' && moves.has('stealthrock'));
 		case 'Unburden':
 			return (!!species.isMega || abilities.has('Prankster') || !counter.setupType && !moves.has('acrobatics'));
 		case 'Water Absorb':
@@ -616,7 +626,7 @@ export class RandomGen6Teams extends RandomGen7Teams {
 		if (moves.has('shellsmash')) {
 			return (ability === 'Solid Rock' && !!counter.get('priority')) ? 'Weakness Policy' : 'White Herb';
 		}
-		if ((ability === 'Guts' || moves.has('facade') || moves.has('psychoshift')) && !moves.has('sleeptalk')) {
+		if ((ability === 'Guts' || moves.has('facade')) && !moves.has('sleeptalk')) {
 			return moves.has('drainpunch') ? 'Flame Orb' : 'Toxic Orb';
 		}
 		if (
@@ -625,6 +635,7 @@ export class RandomGen6Teams extends RandomGen7Teams {
 		) {
 			return 'Life Orb';
 		}
+		if (moves.has('psychoshift')) return 'Flame Orb';
 		if (ability === 'Poison Heal') return 'Toxic Orb';
 		if (ability === 'Unburden') {
 			if (moves.has('fakeout')) {
@@ -904,12 +915,18 @@ export class RandomGen6Teams extends RandomGen7Teams {
 							!moves.has('icebeam') ||
 							species.baseStats.spa >= species.baseStats.spd)
 						) ||
-						(!counter.get('recovery') && !counter.setupType && !moves.has('healingwish') && (
-							movePool.includes('recover') || movePool.includes('roost') || movePool.includes('softboiled')
-						) && (counter.get('Status') > 1 || (species.nfe && !!counter.get('Status')))) ||
+						(!counter.get('recovery') && !counter.setupType &&
+						['healingwish', 'switcheroo', 'trick', 'trickroom'].every(m => !moves.has(m)) &&
+						(['recover', 'roost', 'slackoff', 'softboiled'].some(m => movePool.includes(m))) &&
+						counter.get('Status')
+						) ||
+						movePool.includes('milkdrink') ||
+						(movePool.includes('moonlight') && types.size < 2) ||
 						(movePool.includes('stickyweb') && !counter.setupType && !teamDetails.stickyWeb) ||
 						(species.requiredMove && movePool.includes(toID(species.requiredMove))) ||
-						(moves.has('suckerpunch') && counter.get('stab') < species.types.length)
+						(moves.has('suckerpunch') && counter.get('stab') < species.types.length) ||
+						(movePool.includes('quiverdance') && ['defog', 'uturn', 'stickyweb'].every(m => !moves.has(m)) &&
+							counter.get('Special') < 4)
 					) {
 						cull = true;
 					} else {
@@ -946,7 +963,7 @@ export class RandomGen6Teams extends RandomGen7Teams {
 					if (
 						move.category !== 'Status' &&
 						!move.damage && !move.flags.charge &&
-						(moveid !== 'hiddenpower' || !availableHP)
+						(!moveid.startsWith('hiddenpower') || !availableHP)
 					) rejectedPool.push(moveid);
 					moves.delete(moveid);
 					if (moveid.startsWith('hiddenpower')) hasHiddenPower = false;
@@ -1034,6 +1051,7 @@ export class RandomGen6Teams extends RandomGen7Teams {
 			} else if (species.name === 'Lopunny' && moves.has('switcheroo') && this.randomChance(2, 3)) {
 				ability = 'Klutz';
 			}
+			if (species.name === 'Altaria') ability = 'Natural Cure';
 		} else {
 			ability = abilityData[0].name;
 		}
