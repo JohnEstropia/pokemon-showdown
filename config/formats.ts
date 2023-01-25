@@ -558,7 +558,7 @@ export const Formats: FormatList = [
 		mod: 'partnersincrime',
 		gameType: 'doubles',
 		// searchShow: false,
-		ruleset: ['Standard Doubles', 'Dynamax Clause'],
+		ruleset: ['Standard Doubles'],
 		banlist: ['Flutter Mane', 'Koraidon', 'Miraidon', 'Dancer', 'Huge Power', 'Moody', 'Pure Power', 'Shadow Tag', 'Ally Switch', 'Baton Pass', 'Revival Blessing', 'Swagger'],
 		onBegin() {
 			for (const pokemon of this.getAllPokemon()) {
@@ -635,9 +635,10 @@ export const Formats: FormatList = [
 		mod: 'gen9',
 		ruleset: ['Standard OMs', '!Obtainable Abilities', 'Ability Clause = 1', 'Sleep Moves Clause', 'Terastal Clause', 'Min Source Gen = 9'],
 		banlist: [
-			'Annihilape', 'Flutter Mane', 'Koraidon', 'Miraidon', 'Slaking', 'Arena Trap', 'Comatose', 'Contrary', 'Gorilla Tactics', 'Huge Power', 'Illusion',
-			'Imposter', 'Innards Out', 'Magic Bounce', 'Magnet Pull', 'Moody', 'Neutralizing Gas', 'Parental Bond', 'Poison Heal', 'Pure Power', 'Shadow Tag',
-			'Simple', 'Speed Boost', 'Stakeout', 'Unburden', 'Water Bubble', 'Wonder Guard', 'King\'s Rock', 'Baton Pass', 'Revival Blessing',
+			'Annihilape', 'Flutter Mane', 'Koraidon', 'Miraidon', 'Slaking', 'Arena Trap', 'Comatose', 'Contrary', 'Fur Coat',
+			'Gorilla Tactics', 'Huge Power', 'Ice Scales', 'Illusion', 'Imposter', 'Innards Out', 'Magic Bounce', 'Magnet Pull',
+			'Moody', 'Neutralizing Gas', 'Parental Bond', 'Poison Heal', 'Pure Power', 'Shadow Tag', 'Simple', 'Speed Boost',
+			'Stakeout', 'Unburden', 'Water Bubble', 'Wonder Guard', 'King\'s Rock', 'Baton Pass', 'Revival Blessing',
 		],
 	},
 	{
@@ -664,10 +665,7 @@ export const Formats: FormatList = [
 
 		mod: 'mixandmega',
 		ruleset: ['Standard OMs', 'Evasion Items Clause', 'Evasion Abilities Clause', 'Sleep Moves Clause', 'Min Source Gen = 9'],
-		banlist: [
-			'Koraidon', 'Miraidon', 'Beedrillite', 'Blazikenite', 'Gengarite', 'Kangaskhanite', 'Mawilite',
-			'Medichamite', 'Moody', 'Shadow Tag', 'Baton Pass', 'Electrify', 'Shed Tail', 'Zap Cannon',
-		],
+		banlist: ['Koraidon', 'Miraidon', 'Beedrillite', 'Blazikenite', 'Gengarite', 'Kangaskhanite', 'Mawilite', 'Medichamite', 'Moody', 'Shadow Tag', 'Baton Pass', 'Shed Tail', 'Zap Cannon'],
 		restricted: ['Flutter Mane', 'Gengar', 'Iron Bundle', 'Kilowattrel', 'Slaking'],
 		onValidateTeam(team) {
 			const itemTable = new Set<ID>();
@@ -748,7 +746,7 @@ export const Formats: FormatList = [
 		],
 
 		mod: 'gen9',
-		ruleset: ['Standard OMs', 'Not Fully Evolved', 'Sleep Moves Clause', 'Min Source Gen = 9'],
+		ruleset: ['Standard OMs', 'Not Fully Evolved', 'Sleep Moves Clause', 'Terastal Clause', 'Min Source Gen = 9'],
 		banlist: [
 			'Bisharp', 'Chansey', 'Haunter', 'Magneton', 'Primeape', 'Scyther', 'Arena Trap', 'Shadow Tag', 'Baton Pass',
 			// Shouldn't be legal
@@ -772,7 +770,7 @@ export const Formats: FormatList = [
 
 		mod: 'gen9',
 		searchShow: false,
-		ruleset: ['Standard OMs', 'Sleep Clause Mod', 'Evasion Items Clause', 'Evasion Abilities Clause', 'Camomons Mod', 'Min Source Gen = 9'],
+		ruleset: ['Standard OMs', 'Sleep Clause Mod', 'Evasion Items Clause', 'Evasion Abilities Clause', 'Terastal Clause', 'Camomons Mod', 'Min Source Gen = 9'],
 		banlist: ['Chien-Pao', 'Koraidon', 'Miraidon', 'Palafin', 'Roaring Moon', 'Arena Trap', 'Moody', 'Shadow Tag', 'Booster Energy', 'King\'s Rock', 'Baton Pass'],
 	},
 	{
@@ -917,8 +915,8 @@ export const Formats: FormatList = [
 		mod: 'gen9',
 		searchShow: false,
 		ruleset: ['Standard OMs', 'Sleep Clause Mod', 'Min Source Gen = 9'],
-		banlist: ['Koraidon', 'Miraidon', 'Palafin', 'Covert Cloak', 'Fake Out'],
-		restricted: ['Dynamic Punch', 'Inferno', 'Mud Slap', 'Nuzzle', 'Power Trip', 'Rapid Spin', 'Stored Power', 'Zap Cannon'],
+		banlist: ['Houndstone', 'Koraidon', 'Miraidon', 'Palafin', 'Covert Cloak', 'Fake Out'],
+		restricted: ['Dynamic Punch', 'Flame Charge', 'Fury Cutter', 'Inferno', 'Nuzzle', 'Power Trip', 'Rapid Spin', 'Stored Power', 'Zap Cannon'],
 		validateSet(set, teamHas) {
 			const item = set.item;
 			const species = this.dex.species.get(set.species);
@@ -932,10 +930,12 @@ export const Formats: FormatList = [
 			if (this.checkCanLearn(move, species, this.allSources(species), set)) {
 				problems.push(`${species.name} can't learn ${move.name}.`);
 			}
+			const accuracyLoweringMove =
+				move.secondaries?.some(secondary => secondary.boosts?.accuracy && secondary.boosts?.accuracy < 0);
+			const flinchMove = move.secondaries?.some(secondary => secondary.volatileStatus === 'flinch');
 			if (this.ruleTable.isRestricted(`move:${move.id}`) ||
-				((move.secondaries?.some(secondary => secondary.boosts?.accuracy && secondary.boosts.accuracy < 0) || move.ohko ||
-					move.multihit || move.id === 'beatup' || move.flags['charge'] || move.priority > 0 || move.damageCallback) &&
-					!this.ruleTable.has(`+move:${move.id}`))) {
+				((accuracyLoweringMove || move.ohko || move.multihit || move.id === 'beatup' || move.flags['charge'] ||
+					move.priority > 0 || move.damageCallback || flinchMove) && !this.ruleTable.has(`+move:${move.id}`))) {
 				problems.push(`The move ${move.name} can't be used as an item.`);
 			}
 			return problems.length ? problems : null;
@@ -988,7 +988,6 @@ export const Formats: FormatList = [
 					}
 				}
 				forte.onModifyMove?.call(this, move, pokemon, target);
-				if (target) forte.onModifyType?.call(this, move, pokemon, target);
 			}
 		},
 		onModifyPriority(priority, source, target, move) {
@@ -1000,18 +999,25 @@ export const Formats: FormatList = [
 				return priority + forte.priority;
 			}
 		},
+		onModifyTypePriority: 1,
+		onModifyType(move, pokemon, target) {
+			const forte = pokemon.m.forte;
+			if (move.category !== 'Status' && forte) {
+				this.singleEvent('ModifyType', forte, null, pokemon, target, move, move);
+			}
+		},
 		onHitPriority: 1,
 		onHit(target, source, move) {
 			const forte = source.m.forte;
 			if (move?.category !== 'Status' && forte) {
-				if (forte.onHit) this.singleEvent('Hit', forte, {}, target, source, move);
-				if (forte.self?.onHit) this.singleEvent('Hit', forte.self, {}, source, source, move);
-				if (forte.onAfterHit) this.singleEvent('AfterHit', forte, {}, target, source, move);
+				this.singleEvent('Hit', forte, {}, target, source, move);
+				if (forte.self) this.singleEvent('Hit', forte.self, {}, source, source, move);
+				this.singleEvent('AfterHit', forte, {}, target, source, move);
 			}
 		},
 		onAfterSubDamage(damage, target, source, move) {
 			const forte = source.m.forte;
-			if (move?.category !== 'Status' && forte?.onAfterSubDamage) {
+			if (move?.category !== 'Status' && forte) {
 				this.singleEvent('AfterSubDamage', forte, null, target, source, move);
 			}
 		},
@@ -1021,7 +1027,7 @@ export const Formats: FormatList = [
 		onAfterMoveSecondaryPriority: 1,
 		onAfterMoveSecondarySelf(source, target, move) {
 			const forte = source.m.forte;
-			if (move?.category !== 'Status' && forte?.onAfterMoveSecondarySelf) {
+			if (move?.category !== 'Status' && forte) {
 				this.singleEvent('AfterMoveSecondarySelf', forte, null, source, target, move);
 			}
 		},
@@ -1029,7 +1035,7 @@ export const Formats: FormatList = [
 		onBasePower(basePower, source, target, move) {
 			const forte = source.m.forte;
 			if (move.category !== 'Status' && forte?.onBasePower) {
-				this.singleEvent('BasePower', forte, null, source, target, move, basePower);
+				forte.onBasePower.call(this, basePower, source, target, move);
 			}
 		},
 		pokemon: {
@@ -1466,6 +1472,65 @@ export const Formats: FormatList = [
 					}
 				}
 			},
+		},
+	},
+	{
+		name: "[Gen 9] Trademarked",
+		desc: `Sacrifice your Pok&eacute;mon's ability for a status move that activates on switch-in.`,
+		threads: [
+			`&bullet; <a href="https://www.smogon.com/forums/threads/3714688/">Trademarked</a>`,
+		],
+
+		mod: 'trademarked',
+		searchShow: false,
+		ruleset: ['Standard OMs', 'Sleep Moves Clause', 'Min Source Gen = 9'],
+		banlist: ['Flutter Mane', 'Koraidon', 'Miraidon', 'Slaking', 'Arena Trap', 'Magnet Pull', 'Moody', 'Shadow Tag', 'Baton Pass'],
+		restricted: [
+			'Baneful Bunker', 'Block', 'Copycat', 'Detect', 'Destiny Bond', 'Encore', 'Fairy Lock', 'Ingrain', 'Instruct', 'Mean Look', 'move:Metronome', 'Protect',
+			'Revival Blessing', 'Roar', 'Silk Trap', 'Spiky Shield', 'Sleep Talk', 'Shed Tail', 'Shell Smash', 'Substitute', 'Whirlwind',
+		],
+		onValidateTeam(team, format, teamHas) {
+			const problems = [];
+			for (const trademark in teamHas.trademarks) {
+				if (teamHas.trademarks[trademark] > 1) {
+					problems.push(`You are limited to 1 of each Trademark.`, `(You have ${teamHas.trademarks[trademark]} Pok\u00e9mon with ${trademark} as a Trademark.)`);
+				}
+			}
+			return problems;
+		},
+		validateSet(set, teamHas) {
+			const dex = this.dex;
+			const ability = dex.moves.get(set.ability);
+			if (!ability.exists) { // Not even a real move
+				return this.validateSet(set, teamHas);
+			}
+			// Contingent trademark bans
+			if (this.ruleTable.isRestricted(`move:${ability.id}`)) {
+				return [`${ability.name} is restricted from being used as a trademark.`];
+			}
+			if (set.moves.map(this.toID).includes(ability.id)) {
+				return [`${set.name} may not use ${ability.name} as both a trademark and one of its moves simultaneously.`];
+			}
+			const customRules = this.format.customRules || [];
+			if (!customRules.includes('!obtainableabilities')) customRules.push('!obtainableabilities');
+			if (!customRules.includes('+noability')) customRules.push('+noability');
+
+			const TeamValidator: typeof import('../sim/team-validator').TeamValidator =
+				require('../sim/team-validator').TeamValidator;
+
+			const validator = new TeamValidator(dex.formats.get(`${this.format.id}@@@${customRules.join(',')}`));
+			const moves = set.moves;
+			set.moves = [ability.id];
+			set.ability = 'No Ability';
+			let problems = validator.validateSet(set, {}) || [];
+			if (problems.length) return problems;
+			set.moves = moves;
+			set.ability = 'No Ability';
+			problems = problems.concat(validator.validateSet(set, teamHas) || []);
+			set.ability = ability.id;
+			if (!teamHas.trademarks) teamHas.trademarks = {};
+			teamHas.trademarks[ability.name] = (teamHas.trademarks[ability.name] || 0) + 1;
+			return problems.length ? problems : null;
 		},
 	},
 	{
@@ -3269,6 +3334,18 @@ export const Formats: FormatList = [
 		banlist: ['Battle Bond'],
 	},
 	{
+		name: "[Gen 7 Let's Go] Doubles OU",
+		threads: [
+			`&bullet; <a href="https://www.smogon.com/forums/threads/3671748/#post-8685222">LGPE Doubles OU</a>`,
+		],
+
+		mod: 'gen7letsgo',
+		gameType: 'doubles',
+		searchShow: false,
+		ruleset: ['Standard Doubles', 'Sleep Clause Mod'],
+		banlist: ['Mewtwo'],
+	},
+	{
 		name: "[Gen 7] Doubles Custom Game",
 
 		mod: 'gen7',
@@ -3378,10 +3455,10 @@ export const Formats: FormatList = [
 			'Cancel Mod', 'Team Preview',
 		],
 		banlist: [
-			'Arceus', 'Blaziken', 'Darkrai', 'Deoxys-Base', 'Deoxys-Attack', 'Deoxys-Defense', 'Dialga', 'Giratina',
-			'Giratina-Origin', 'Groudon', 'Ho-Oh', 'Kangaskhan-Mega', 'Kyogre', 'Kyurem-White', 'Lugia', 'Mewtwo',
-			'Palkia', 'Rayquaza', 'Reshiram', 'Salamence-Mega', 'Shaymin-Sky', 'Snorlax', 'Xerneas', 'Yveltal',
-			'Zekrom', 'Focus Sash', 'Soul Dew', 'Grass Whistle', 'Hypnosis', 'Perish Song', 'Sing', 'Yawn',
+			'Arceus', 'Blaziken', 'Charizard-Mega-Y', 'Darkrai', 'Deoxys-Base', 'Deoxys-Attack', 'Deoxys-Defense', 'Dialga',
+			'Giratina', 'Giratina-Origin', 'Groudon', 'Ho-Oh', 'Kangaskhan-Mega', 'Kyogre', 'Kyurem-White', 'Lugia', 'Mewtwo',
+			'Palkia', 'Rayquaza', 'Reshiram', 'Salamence-Mega', 'Shaymin-Sky', 'Snorlax', 'Xerneas', 'Yveltal', 'Zekrom',
+			'Focus Sash', 'Soul Dew', 'Grass Whistle', 'Hypnosis', 'Perish Song', 'Sing', 'Yawn',
 		],
 	},
 	{
