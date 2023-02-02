@@ -1601,22 +1601,13 @@ export const Abilities: {[abilityid: string]: AbilityData} = {
 	},
 	hadronengine: {
 		onStart(pokemon) {
-			if (
-				!this.field.setTerrain('electricterrain') &&
-				this.field.isTerrain('electricterrain') && pokemon.isGrounded()
-			) {
-				this.add('-activate', pokemon, 'ability: Hadron Engine');
-			}
-		},
-		onTerrainChange(pokemon) {
-			if (pokemon === this.field.weatherState.source) return;
-			if (this.field.isTerrain('electricterrain') && pokemon.isGrounded()) {
+			if (!this.field.setTerrain('electricterrain') && this.field.isTerrain('electricterrain')) {
 				this.add('-activate', pokemon, 'ability: Hadron Engine');
 			}
 		},
 		onModifySpAPriority: 5,
 		onModifySpA(atk, attacker, defender, move) {
-			if (this.field.isTerrain('electricterrain') && attacker.isGrounded()) {
+			if (this.field.isTerrain('electricterrain')) {
 				this.debug('Hadron Engine boost');
 				return this.chainModify([5461, 4096]);
 			}
@@ -2386,8 +2377,10 @@ export const Abilities: {[abilityid: string]: AbilityData} = {
 					const negativeBoost: SparseBoostsTable = {};
 					negativeBoost[b] = boost[b];
 					delete boost[b];
-					this.add('-ability', target, 'Mirror Armor');
-					this.boost(negativeBoost, source, target, null, true);
+					if (source.hp) {
+						this.add('-ability', target, 'Mirror Armor');
+						this.boost(negativeBoost, source, target, null, true);
+					}
 				}
 			}
 		},
@@ -2764,14 +2757,9 @@ export const Abilities: {[abilityid: string]: AbilityData} = {
 	},
 	orichalcumpulse: {
 		onStart(pokemon) {
-			// not affected by Utility Umbrella
-			if (!this.field.setWeather('sunnyday') && this.field.effectiveWeather() === 'sunnyday') {
-				this.add('-activate', pokemon, 'ability: Orichalcum Pulse');
-			}
-		},
-		onWeatherChange(pokemon) {
-			if (pokemon === this.field.weatherState.source) return;
-			if (this.field.effectiveWeather() === 'sunnyday') {
+			if (this.field.setWeather('sunnyday')) {
+				this.add('-activate', pokemon, 'Orichalcum Pulse', '[source]');
+			} else if (this.field.isWeather('sunnyday')) {
 				this.add('-activate', pokemon, 'ability: Orichalcum Pulse');
 			}
 		},
@@ -4530,6 +4518,12 @@ export const Abilities: {[abilityid: string]: AbilityData} = {
 		onDamagingHit(damage, target, source, move) {
 			if (move.type === 'Fire') {
 				this.boost({atk: 1});
+			}
+		},
+		onUpdate(pokemon) {
+			if (pokemon.status === 'brn') {
+				this.add('-activate', pokemon, 'ability: Thermal Exchange');
+				pokemon.cureStatus();
 			}
 		},
 		onSetStatus(status, target, source, effect) {
