@@ -558,8 +558,9 @@ export const Formats: FormatList = [
 		mod: 'gen9',
 		ruleset: ['Standard OMs', 'Sleep Clause Mod', 'Convergence Legality', '!Obtainable Abilities', 'Min Source Gen = 9'],
 		banlist: [
-			'Cyclizar', 'Flutter Mane', 'Iron Bundle', 'Koraidon', 'Miraidon', 'Slaking', 'Arena Trap', 'Comatose', 'Imposter', 'Moody',
-			'Pure Power', 'Shadow Tag', 'Damp Rock', 'Baton Pass', 'Last Respects', 'Revival Blessing', 'Shell Smash', 'Spore',
+			'Cyclizar', 'Dondozo', 'Flutter Mane', 'Iron Bundle', 'Koraidon', 'Miraidon', 'Slaking', 'Arena Trap', 'Comatose', 'Imposter',
+			'Moody', 'Pure Power', 'Shadow Tag', 'Speed Boost', 'Damp Rock', 'King\'s Rock', 'Baton Pass', 'Last Respects', 'Revival Blessing',
+			'Shell Smash', 'Spore',
 		],
 	},
 	{
@@ -573,8 +574,9 @@ export const Formats: FormatList = [
 		// searchShow: false,
 		ruleset: ['Standard OMs', 'Sleep Clause Mod', 'Evasion Items Clause', 'Evasion Abilities Clause', 'Terastal Clause', 'Camomons Mod', 'Min Source Gen = 9'],
 		banlist: [
-			'Baxcalibur', 'Chien-Pao', 'Dragonite', 'Espathra', 'Flutter Mane', 'Iron Bundle', 'Koraidon', 'Miraidon',
-			'Palafin', 'Roaring Moon', 'Arena Trap', 'Moody', 'Shadow Tag', 'Booster Energy', 'King\'s Rock', 'Baton Pass',
+			'Baxcalibur', 'Chi-Yu', 'Chien-Pao', 'Cyclizar', 'Dragonite', 'Drednaw', 'Espathra', 'Flutter Mane', 'Houndstone',
+			'Iron Bundle', 'Koraidon', 'Miraidon', 'Palafin', 'Roaring Moon', 'Volcarona', 'Arena Trap', 'Moody', 'Shadow Tag',
+			'Booster Energy', 'King\'s Rock', 'Baton Pass',
 		],
 	},
 
@@ -881,6 +883,9 @@ export const Formats: FormatList = [
 			set.item = item;
 			if (this.checkCanLearn(move, species, this.allSources(species), set)) {
 				problems.push(`${species.name} can't learn ${move.name}.`);
+			}
+			if (set.moves.map(this.toID).includes(move.id)) {
+				problems.push(`Moves in the item slot can't be in the moveslots as well.`);
 			}
 			const accuracyLoweringMove =
 				move.secondaries?.some(secondary => secondary.boosts?.accuracy && secondary.boosts?.accuracy < 0);
@@ -1982,6 +1987,16 @@ export const Formats: FormatList = [
 		mod: 'potd',
 		team: 'random',
 		ruleset: ['[Gen 9] Random Battle'],
+		onBegin() {
+			const potdPokemon = [
+				"hoopa", "groudon", "dachsbun", "squawkabilly", "cacturne", "typhlosion", "jolteon", "masquerain", "falinks",
+				"wyrdeer", "gardevoir", "decidueye", "hawlucha", "azelf", "gothitelle", "donphan", "pikachu", "zaciancrowned",
+				"quagsire", "uxie", "dondozo", "orthworm", "klawf", "dunsparce", "avalugg", "pawmot", "qwilfish", "lilliganthisui",
+			];
+			const day = new Date().getDate();
+			const species = this.dex.species.get(potdPokemon[day > 28 ? 27 : day - 1]);
+			this.add(`raw|<div class='broadcast-blue'><b>Pokemon-of-the-Day: ${species.name}</b></div>`);
+		},
 	},
 
 	// Randomized Metas
