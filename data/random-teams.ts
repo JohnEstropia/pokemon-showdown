@@ -460,19 +460,20 @@ export class RandomTeams {
 			this.incompatibleMoves(moves, movePool, Setup, pivotingMoves);
 		}
 		this.incompatibleMoves(moves, movePool, Setup, Hazards);
-		this.incompatibleMoves(moves, movePool, Setup, ['defog', 'nuzzle', 'toxic', 'waterspout', 'yawn']);
+		this.incompatibleMoves(moves, movePool, Setup, ['defog', 'nuzzle', 'toxic', 'waterspout', 'yawn', 'haze']);
 		this.incompatibleMoves(moves, movePool, PhysicalSetup, PhysicalSetup);
 		this.incompatibleMoves(moves, movePool, SpecialSetup, 'thunderwave');
 		this.incompatibleMoves(moves, movePool, 'substitute', pivotingMoves);
 		this.incompatibleMoves(moves, movePool, SpeedSetup, ['aquajet', 'rest', 'trickroom']);
 		this.incompatibleMoves(moves, movePool, 'curse', 'rapidspin');
 		this.incompatibleMoves(moves, movePool, 'dragondance', 'dracometeor');
+		this.incompatibleMoves(moves, movePool, 'healingwish', 'uturn');
 
 
 		// These attacks are redundant with each other
 		this.incompatibleMoves(moves, movePool, 'psychic', 'psyshock');
 		this.incompatibleMoves(moves, movePool, 'surf', 'hydropump');
-		this.incompatibleMoves(moves, movePool, ['liquidation', 'ragingbull'], ['liquidation', 'wavecrash']);
+		this.incompatibleMoves(moves, movePool, 'liquidation', 'wavecrash');
 		this.incompatibleMoves(moves, movePool, ['airslash', 'bravebird', 'hurricane'], ['airslash', 'bravebird', 'hurricane']);
 		this.incompatibleMoves(moves, movePool, 'knockoff', 'foulplay');
 		this.incompatibleMoves(moves, movePool, 'doubleedge', 'headbutt');
@@ -505,7 +506,7 @@ export class RandomTeams {
 		this.incompatibleMoves(moves, movePool, 'snowscape', 'swordsdance');
 		// Cryogonal
 		if (!teamDetails.defog && !teamDetails.rapidSpin && species.id === 'cryogonal') {
-			this.fastPop(movePool, movePool.indexOf('haze'));
+			if (movePool.includes('haze')) this.fastPop(movePool, movePool.indexOf('haze'));
 		}
 		// Magnezone
 		this.incompatibleMoves(moves, movePool, 'bodypress', 'mirrorcoat');
@@ -1040,7 +1041,9 @@ export class RandomTeams {
 		if (species.id === 'regieleki') return 'Magnet';
 		if (species.id === 'pincurchin') return 'Shuca Berry';
 		if (species.id === 'cyclizar' && role === 'Fast Attacker') return 'Choice Scarf';
-		if (species.id === 'lokix' && role === 'Wallbreaker') return 'Life Orb';
+		if (species.id === 'lokix') {
+			return (role === 'Fast Attacker') ? 'Silver Powder' : 'Life Orb';
+		}
 		if (species.id === 'toxtricity' && moves.has('shiftgear')) return 'Throat Spray';
 		if (species.baseSpecies === 'Magearna' && role === 'Tera Blast user') return 'Weakness Policy';
 		if (moves.has('lastrespects')) return 'Choice Scarf';
@@ -1204,8 +1207,8 @@ export class RandomTeams {
 		) return 'Rocky Helmet';
 		if (
 			role === 'Fast Support' && isLead &&
-			!counter.get('recovery') && !counter.get('recoil') &&
-			(species.baseStats.hp + species.baseStats.def + species.baseStats.spd) < 300
+			!counter.get('recovery') && !counter.get('recoil') && !moves.has('protect') &&
+			(species.baseStats.hp + species.baseStats.def + species.baseStats.spd) < 258
 		) return 'Focus Sash';
 		if (
 			role !== 'Fast Attacker' && role !== 'Tera Blast user' && ability !== 'Levitate' &&
@@ -1578,7 +1581,9 @@ export class RandomTeams {
 
 			// Track what the team has
 			if (set.ability === 'Drizzle' || set.moves.includes('raindance')) teamDetails.rain = 1;
-			if (set.ability === 'Drought' || set.moves.includes('sunnyday')) teamDetails.sun = 1;
+			if (set.ability === 'Drought' || set.ability === 'Orichalcum Pulse' || set.moves.includes('sunnyday')) {
+				teamDetails.sun = 1;
+			}
 			if (set.ability === 'Sand Stream') teamDetails.sand = 1;
 			if (set.ability === 'Snow Warning' || set.moves.includes('snowscape') || set.moves.includes('chillyreception')) {
 				teamDetails.snow = 1;
@@ -2004,28 +2009,26 @@ export class RandomTeams {
 		let naturePool: Nature[] = [];
 		if (doNaturesExist) {
 			if (!hasCustomBans) {
-				if (!hasCustomBans) {
-					naturePool = [...this.dex.natures.all()];
-				} else {
-					const hasAllNaturesBan = ruleTable.check('pokemontag:allnatures');
-					for (const nature of this.dex.natures.all()) {
-						let banReason = ruleTable.check('nature:' + nature.id);
-						if (banReason) continue;
-						if (banReason !== '' && nature.id) {
-							if (hasAllNaturesBan) continue;
-							if (nature.isNonstandard) {
-								banReason = ruleTable.check('pokemontag:' + toID(nature.isNonstandard));
-								if (banReason) continue;
-								if (banReason !== '' && nature.isNonstandard !== 'Unobtainable') {
-									if (hasNonexistentBan) continue;
-									if (!hasNonexistentWhitelist) continue;
-								}
+				naturePool = [...this.dex.natures.all()];
+			} else {
+				const hasAllNaturesBan = ruleTable.check('pokemontag:allnatures');
+				for (const nature of this.dex.natures.all()) {
+					let banReason = ruleTable.check('nature:' + nature.id);
+					if (banReason) continue;
+					if (banReason !== '' && nature.id) {
+						if (hasAllNaturesBan) continue;
+						if (nature.isNonstandard) {
+							banReason = ruleTable.check('pokemontag:' + toID(nature.isNonstandard));
+							if (banReason) continue;
+							if (banReason !== '' && nature.isNonstandard !== 'Unobtainable') {
+								if (hasNonexistentBan) continue;
+								if (!hasNonexistentWhitelist) continue;
 							}
 						}
-						naturePool.push(nature);
 					}
-					// There is no 'nature:nonature' rule so do not constrain pool size
+					naturePool.push(nature);
 				}
+				// There is no 'nature:nonature' rule so do not constrain pool size
 			}
 		}
 

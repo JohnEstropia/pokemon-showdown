@@ -207,10 +207,10 @@ export const Scripts: ModdedBattleScriptsData = {
 						// We remove recharge
 						if (pokemon.volatiles['mustrecharge']) pokemon.removeVolatile('mustrecharge');
 						delete pokemon.volatiles['partialtrappinglock'];
-					} else if (pokemon.hp) {
-						this.battle.runEvent('AfterMoveSelf', pokemon, target, move);
+					} else {
+						if (pokemon.volatiles['mustrecharge']) this.battle.add('-mustrecharge', pokemon);
+						if (pokemon.hp) this.battle.runEvent('AfterMoveSelf', pokemon, target, move);
 					}
-					if (pokemon.volatiles['mustrecharge']) this.battle.add('-mustrecharge', pokemon);
 
 					// For partial trapping moves, we are saving the target
 					if (move.volatileStatus === 'partiallytrapped' && target && target.hp > 0) {
@@ -578,7 +578,7 @@ export const Scripts: ModdedBattleScriptsData = {
 				if (moveData.boosts && target.hp) {
 					const willBoost = this.battle.boost(moveData.boosts, target, pokemon, move);
 					if (!willBoost) {
-						if (willBoost === false) this.battle.add('-fail', target);
+						this.battle.add('-fail', target);
 						return false;
 					}
 					didSomething = true;
