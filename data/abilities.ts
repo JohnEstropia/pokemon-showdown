@@ -161,7 +161,7 @@ export const Abilities: {[abilityid: string]: AbilityData} = {
 			}
 		},
 		name: "Anger Shell",
-		rating: 4,
+		rating: 3,
 		num: 271,
 	},
 	anticipation: {
@@ -582,6 +582,7 @@ export const Abilities: {[abilityid: string]: AbilityData} = {
 				// Cancel all actions this turn for pokemon if applicable
 				this.queue.cancelAction(pokemon);
 				// Add volatiles to both pokemon
+				this.add('-activate', pokemon, 'ability: Commander', '[of] ' + ally);
 				pokemon.addVolatile('commanding');
 				ally.addVolatile('commanded', pokemon);
 				// Continued in conditions.ts in the volatiles
@@ -1612,6 +1613,7 @@ export const Abilities: {[abilityid: string]: AbilityData} = {
 				return this.chainModify([5461, 4096]);
 			}
 		},
+		isPermanent: true,
 		name: "Hadron Engine",
 		rating: 4.5,
 		num: 289,
@@ -2770,6 +2772,7 @@ export const Abilities: {[abilityid: string]: AbilityData} = {
 				return this.chainModify([5461, 4096]);
 			}
 		},
+		isPermanent: true,
 		name: "Orichalcum Pulse",
 		rating: 4.5,
 		num: 288,

@@ -12,8 +12,10 @@ export class RandomGen6Teams extends RandomGen7Teams {
 		this.noStab = [...this.noStab, 'aquajet', 'fakeout', 'iceshard', 'machpunch', 'quickattack', 'vacuumwave'];
 
 		this.moveEnforcementCheckers = {
-			Bug: (movePool, moves, abilities, types, counter) => (['megahorn', 'pinmissile'].some(m => movePool.includes(m)) ||
-				!counter.get('Bug') && abilities.has('Tinted Lens')),
+			Bug: (movePool, moves, abilities, types, counter) => (
+				['megahorn', 'pinmissile'].some(m => movePool.includes(m)) ||
+				!counter.get('Bug') && (abilities.has('Tinted Lens') || abilities.has('Adaptability'))
+			),
 			Dark: (movePool, moves, abilities, types, counter, species) => (
 				(!counter.get('Dark') && !abilities.has('Protean'))
 			),
@@ -21,6 +23,7 @@ export class RandomGen6Teams extends RandomGen7Teams {
 				!counter.get('Dragon') &&
 				!abilities.has('Aerilate') &&
 				!abilities.has('Pixilate') &&
+				!moves.has('dragonascent') &&
 				!moves.has('rest') &&
 				!moves.has('sleeptalk')
 			),
@@ -266,7 +269,12 @@ export class RandomGen6Teams extends RandomGen7Teams {
 				(abilities.has('Protean') && counter.get('Status') > 2)
 			)};
 		case 'voltswitch':
-			return {cull: !!counter.setupType || !!counter.get('speedsetup') || moves.has('raindance') || moves.has('uturn')};
+			return {cull: (
+				!!counter.setupType ||
+				!!counter.get('speedsetup') ||
+				moves.has('raindance') ||
+				moves.has('uturn') ||
+				movePool.includes('boltstrike'))};
 		case 'wish':
 			return {cull: (
 				species.baseStats.hp < 110 &&
@@ -513,7 +521,7 @@ export class RandomGen6Teams extends RandomGen7Teams {
 		species: Species
 	): boolean {
 		switch (ability) {
-		case 'Flare Boost': case 'Gluttony': case 'Moody': case 'Snow Cloak': case 'Steadfast':
+		case 'Flare Boost': case 'Gluttony': case 'Moody': case 'Snow Cloak': case 'Steadfast': case 'Magician':
 			return true;
 		case 'Contrary': case 'Iron Fist': case 'Skill Link': case 'Strong Jaw':
 			return !counter.get(toID(ability));
@@ -639,6 +647,7 @@ export class RandomGen6Teams extends RandomGen7Teams {
 		if (species.name === 'Deoxys-Attack') return (isLead && moves.has('stealthrock')) ? 'Focus Sash' : 'Life Orb';
 		if (species.name === 'Farfetch\u2019d') return 'Stick';
 		if (species.name === 'Genesect' && moves.has('technoblast')) return 'Douse Drive';
+		if (species.name === 'Latias' || species.name === 'Latios') return 'Soul Dew';
 		if (species.baseSpecies === 'Pikachu') return 'Light Ball';
 		if (species.name === 'Shedinja' || species.name === 'Smeargle') return 'Focus Sash';
 		if (species.name === 'Unfezant' && counter.get('Physical') >= 2) return 'Scope Lens';
