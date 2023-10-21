@@ -894,16 +894,14 @@ export class RoomBattle extends RoomGames.RoomGame<RoomBattlePlayer> {
 		const p2name = this.p2.name;
 		const p1id = toID(p1name);
 		const p2id = toID(p2name);
+		if (winnerid === p1id) {
+			p1score = 1;
+		} else if (winnerid === p2id) {
+			p1score = 0;
+		}
 		Chat.runHandlers('onBattleEnd', this, winnerid, [p1id, p2id, this.p3?.id, this.p4?.id].filter(Boolean));
-		if (this.room.rated) {
+		if (this.room.rated && !this.options.isSubBattle) {
 			this.room.rated = 0;
-
-			if (winnerid === p1id) {
-				p1score = 1;
-			} else if (winnerid === p2id) {
-				p1score = 0;
-			}
-
 			winner = Users.get(winnerid);
 			if (winner && !winner.registered) {
 				this.room.sendUser(winner, '|askreg|' + winner.id);
@@ -912,13 +910,8 @@ export class RoomBattle extends RoomGames.RoomGame<RoomBattlePlayer> {
 			void this.logBattle(score, p1rating, p2rating);
 			Chat.runHandlers('onBattleRanked', this, winnerid, [p1rating, p2rating], [p1id, p2id]);
 		} else if (Config.logchallenges) {
-			if (winnerid === p1id) {
-				p1score = 1;
-			} else if (winnerid === p2id) {
-				p1score = 0;
-			}
 			void this.logBattle(p1score);
-		} else {
+		} else if (!this.options.isSubBattle) {
 			this.logData = null;
 		}
 		// If a replay was saved at any point or we were configured to autosavereplays,
@@ -1446,24 +1439,23 @@ export class BestOfGame extends RoomGames.RoomGame {
 		const p1name = this.name(this.p1);
 		const p2name = this.name(this.p2);
 		let buf = Utils.html`<br /><strong>${p1name} and ${p2name}'s Best-of-${this.bestOf} progress:</strong><br />`;
-		for (const userid of [this.p1, this.p2]) {
-			buf += `<span style="text-align: right">`;
-			buf += `${this.name(userid)}: `;
+		buf += '<table>';
+		for (const k of ['p1', 'p2'] as const) {
+			const userid = this[k];
+			buf += `<tr><td>${this.name(userid)}: </td><td>`;
 			for (let i = 0; i < this.bestOf; i++) {
 				if (this.games[i]?.winner === userid) {
 					buf += `<i class="fa fa-circle"></i>`;
 				} else {
 					buf += `<i class="fa fa-circle-o"></i>`;
 				}
-				if ((i + 1) === this.winThreshold) {
-					buf += ` | `;
-				} else {
+				if (i !== this.bestOf - 1) {
 					buf += ` `;
 				}
 			}
-			buf += `</span><br />`;
+			buf += `</td></tr>`;
 		}
-		buf += `<br /><br />`;
+		buf += `</table><br /><br />`;
 		buf += `<table><tr>`;
 
 		for (const userid of [this.p1, null, this.p2]) {
@@ -1476,7 +1468,7 @@ export class BestOfGame extends RoomGames.RoomGame {
 
 		buf += `</tr><tr>`;
 
-		for (const userid of [this.p1, null, this.p2]) {
+		for (const [i, userid] of [this.p1, null, this.p2].entries()) {
 			if (userid === null) {
 				buf += `<td></td>`;
 				continue;
@@ -1485,7 +1477,7 @@ export class BestOfGame extends RoomGames.RoomGame {
 			if (!name || typeof name === 'number') name = 'unknownf';
 			const url = Chat.plugins.avatars?.Avatars.src(name) || `https://${Config.routes.client}/sprites/trainers/${name}.png`;
 			buf += `<td><center>`;
-			buf += `<img src="${url}" width="80" height="80" />`;
+			buf += `<img class="trainersprite"${!i ? ' style="transform: scaleX(-1)"' : ""} src="${url}" />`;
 			buf += `</center></td>`;
 		}
 
@@ -1497,7 +1489,7 @@ export class BestOfGame extends RoomGames.RoomGame {
 				continue;
 			}
 			const team = Teams.unpack(this.options[slot as 'p1' | 'p2']?.team || "");
-			if (!team) {
+			if (!team || !Dex.formats.getRuleTable(this.format).has('teampreview')) {
 				buf += `<td>`;
 				buf += `<psicon pokemon="unknown" /> `.repeat(3);
 				buf += `<br />`;
@@ -1541,7 +1533,7 @@ export class BestOfGame extends RoomGames.RoomGame {
 	onBattleWin(room: Room, winnerid: string) {
 		const loser = this.p1 === winnerid ? this.p2 : this.p1;
 		const loserPlayer = room.battle!.playerTable[loser];
-		if (loserPlayer.hitDisconnectLimit) { // disconnection means opp wins the set
+		if (loserPlayer?.hitDisconnectLimit) { // disconnection means opp wins the set
 			this.room.add(`${this.name(loser)} lost the series due to inactivity.`);
 			return this.onEnd(winnerid as ID);
 		}
@@ -1600,7 +1592,7 @@ export class BestOfGame extends RoomGames.RoomGame {
 			if (!this.ready![k]) {
 				const diff = (this.nextBattleTimerStart + 60000) - Date.now();
 				this.waitingBattle?.room.add(
-					`|inactive|${this.name(this[k])} has ${Chat.toDurationString(diff + 1000)}` +
+					`|inactive|${this.name(this[k])} has ${Chat.toDurationString(diff + 100)}` +
 					` to confirm battle start!`
 				);
 			}
@@ -1631,19 +1623,27 @@ export class BestOfGame extends RoomGames.RoomGame {
 	private name(str: string) {
 		return Users.get(str)?.name || str;
 	}
+	win(targetUser: User | ID) {
+		targetUser = toID(targetUser);
+		if (!this.playerTable[targetUser]) return false;
+		return this.onEnd(targetUser);
+	}
+	tie() {
+		return this.onEnd('');
+	}
 	async onEnd(winner: ID) {
 		this.cleanup();
 		this.room.add(`|allowleave|`).update();
 		if (winner) {
 			this.winner = winner;
-			this.room.add(`|win|${winner}`);
+			this.room.add(`|win|${this.name(winner)}`);
 		} else {
 			this.winner = '';
 			this.room.add(`|tie`);
 		}
 		this.updateDisplay();
 		this.room.update();
-		this.score = this.getLatestBattle()?.score || null;
+		this.score = [this.wins.p1, this.wins.p2];
 		const parentGame = this.room.parent && this.room.parent.game;
 		// @ts-ignore - Tournaments aren't TS'd yet
 		if (parentGame?.onBattleWin) {
@@ -1664,11 +1664,6 @@ export class BestOfGame extends RoomGames.RoomGame {
 
 		const {rated, battle: room} = this.games[this.games.length - 1];
 		const battle = room.battle!;
-		if (winner === this.p1) {
-			p1score = 1;
-		} else if (winner === this.p2) {
-			p1score = 0;
-		}
 		if (rated) {
 			(room as GameRoom).rated = rated; // just in case
 			const winnerUser = Users.get(winner);
@@ -1680,10 +1675,6 @@ export class BestOfGame extends RoomGames.RoomGame {
 			);
 			void battle.logBattle(score, p1rating, p2rating);
 			Chat.runHandlers('onBattleRanked', battle, winner, [p1rating, p2rating], [this.p1, this.p2]);
-		} else if (Config.logchallenges) {
-			void battle.logBattle(p1score);
-		} else {
-			battle.logData = null;
 		}
 	}
 	forfeit(user: User | string, message = '') {

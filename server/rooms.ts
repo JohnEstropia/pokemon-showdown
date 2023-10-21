@@ -2014,23 +2014,6 @@ export class GameRoom extends BasicRoom {
 			this.reportJoin('j', user.getIdentityWithStatus(this), user);
 		}
 
-		// This is only here because of an issue with private logs not getting resent
-		// when a user reloads on a battle and autojoins. This should be removed when that gets fixed.
-		void (async () => {
-			if (this.battle) {
-				const player = this.battle.playerTable[user.id];
-				if (player && this.battle.players.every(curPlayer => curPlayer.wantsOpenTeamSheets)) {
-					let buf = '|uhtml|ots|';
-					for (const curPlayer of this.battle.players) {
-						const team = await this.battle.getTeam(curPlayer.id);
-						if (!team) continue;
-						buf += Utils.html`<div class="infobox" style="margin-top:5px"><details><summary>Open Team Sheet for ${curPlayer.name}</summary>${Teams.export(team, {hideStats: true})}</details></div>`;
-					}
-					player.sendRoom(buf);
-				}
-			}
-		})();
-
 		this.users[user.id] = user;
 		this.userCount++;
 		this.checkAutoModchat(user);
@@ -2177,14 +2160,15 @@ export const Rooms = {
 		const format = Dex.formats.get(options.format);
 		const isBestOf = Dex.formats.getRuleTable(format).valueRules.get('bestof');
 
-		if (Rooms.global.lockdown === 'pre' && isBestOf) {
+		if (Rooms.global.lockdown === 'pre' && isBestOf && !options.isSubBattle) {
 			for (const user of players) {
 				user.popup(`The server will be restarting soon. Best-of-${isBestOf} battles cannot be started at this time.`);
 			}
 			return;
 		}
 
-		if (Rooms.global.lockdown === true) {
+		// gotta allow new bo3 child battles to start
+		if (Rooms.global.lockdown === true && !options.isSubBattle) {
 			for (const user of players) {
 				user.popup("The server is restarting. Battles will be available again in a few minutes.");
 			}
@@ -2225,7 +2209,7 @@ export const Rooms = {
 			// p1 vs. p2 vs. p3 vs. p4 is too long of a title
 			roomTitle = `${p1name} and friends`;
 		} else if (isBestOf && !options.isSubBattle) {
-			roomTitle = `${format.name} (${p1name} vs ${p2name})`;
+			roomTitle = `${p1name} vs. ${p2name}`;
 			roomid = `game-bestof${isBestOf}-${format.id}-${++Rooms.global.lastBattle}` as RoomID;
 		} else if (options.title) {
 			roomTitle = options.title;
