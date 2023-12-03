@@ -259,7 +259,7 @@ export class RandomGen6Teams extends RandomGen7Teams {
 		}
 
 		const statusInflictingMoves = ['thunderwave', 'toxic', 'willowisp', 'yawn'];
-		if (!abilities.has('Prankster')) {
+		if (!abilities.has('Prankster') && role !== 'Staller') {
 			this.incompatibleMoves(moves, movePool, statusInflictingMoves, statusInflictingMoves);
 		}
 
@@ -651,6 +651,7 @@ export class RandomGen6Teams extends RandomGen7Teams {
 		if (species.id === 'ambipom' && !counter.get('technician')) return 'Pickup';
 		if (['dusknoir', 'vespiquen', 'wailord'].includes(species.id)) return 'Pressure';
 		if (species.id === 'druddigon' && role === 'Bulky Support') return 'Rough Skin';
+		if (species.id === 'pangoro' && !counter.get('ironfist')) return 'Scrappy';
 		if (species.id === 'stunfisk') return 'Static';
 		if (species.id === 'breloom') return 'Technician';
 		if (species.id === 'zangoose') return 'Toxic Boost';
@@ -793,7 +794,7 @@ export class RandomGen6Teams extends RandomGen7Teams {
 			) ? 'Choice Scarf' : 'Choice Specs';
 		}
 		if (counter.get('Special') === 3 && moves.has('uturn')) return 'Choice Specs';
-		if (counter.get('Physical') === 4 && species.id !== 'jirachi' && species.id !== 'spinda' &&
+		if (counter.get('Physical') === 4 && species.id !== 'jirachi' &&
 			['dragontail', 'fakeout', 'flamecharge', 'nuzzle', 'rapidspin'].every(m => !moves.has(m))
 		) {
 			return (
