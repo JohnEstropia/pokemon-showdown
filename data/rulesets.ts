@@ -587,12 +587,11 @@ export const Rulesets: {[k: string]: FormatData} = {
 		onTeamPreview() {
 			this.add('clearpoke');
 			for (const pokemon of this.getAllPokemon()) {
-				let details = pokemon.details.replace(', shiny', '');
+				let details = pokemon.details.replace(', shiny', '')
+					.replace(/(Zacian|Zamazenta)(?!-Crowned)/g, '$1-*'); // Hacked-in Crowned formes will be revealed
 				if (!this.ruleTable.has('speciesrevealclause')) {
 					details = details
-						.replace(/(Greninja|Gourgeist|Pumpkaboo|Xerneas|Silvally|Urshifu|Dudunsparce)(-[a-zA-Z?-]+)?/g, '$1-*')
-						// Still here for National Dex BH
-						.replace(/(Zacian|Zamazenta)(?!-Crowned)/g, '$1-*'); // Hacked-in Crowned formes will be revealed
+						.replace(/(Greninja|Gourgeist|Pumpkaboo|Xerneas|Silvally|Urshifu|Dudunsparce)(-[a-zA-Z?-]+)?/g, '$1-*');
 				}
 				this.add('poke', pokemon.side.id, details, '');
 			}
@@ -1819,7 +1818,8 @@ export const Rulesets: {[k: string]: FormatData} = {
 			}
 			const problems = [];
 			for (const move of set.moves) {
-				if (moveSources[this.toID(move)]?.every(learned => learned.includes('S'))) {
+				const sources = moveSources[this.toID(move)];
+				if (sources?.length && sources.every(learned => learned.includes('S'))) {
 					problems.push(`${species.name}'s move ${move} is obtainable only through events.`);
 				}
 			}
