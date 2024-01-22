@@ -1099,7 +1099,7 @@ export const FormatsData: {[k: string]: SpeciesFormatsData} = {
 		natDexTier: "RU",
 	},
 	porygon: {
-		tier: "LC",
+		tier: "NFE",
 	},
 	porygon2: {
 		tier: "PU",
@@ -5574,7 +5574,7 @@ export const FormatsData: {[k: string]: SpeciesFormatsData} = {
 	ceruledge: {
 		tier: "UU",
 		doublesTier: "DUU",
-		natDexTier: "UU",
+		natDexTier: "UUBL",
 	},
 	toedscool: {
 		tier: "LC",
