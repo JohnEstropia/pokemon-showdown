@@ -1,5 +1,5 @@
-import {FS, Utils} from '../../lib';
-import type {FilterWord} from '../chat';
+import { FS, Utils } from '../../lib';
+import type { FilterWord } from '../chat';
 
 const LEGACY_MONITOR_FILE = 'config/chat-plugins/chat-monitor.tsv';
 const MONITOR_FILE = 'config/chat-plugins/chat-filter.json';
@@ -7,13 +7,13 @@ const WRITE_THROTTLE_TIME = 5 * 60 * 1000;
 
 // Substitution dictionary adapted from https://github.com/ThreeLetters/NoSwearingPlease/blob/master/index.js
 // Licensed under MIT.
-const EVASION_DETECTION_SUBSTITUTIONS: {[k: string]: string[]} = {
+const EVASION_DETECTION_SUBSTITUTIONS: { [k: string]: string[] } = {
 	a: ["a", "4", "@", "á", "â", "ã", "à", "ᗩ", "A", "ⓐ", "Ⓐ", "α", "͏", "₳", "ä", "Ä", "Ꮧ", "λ", "Δ", "Ḁ", "Ꭺ", "ǟ", "̾", "ａ", "Ａ", "ᴀ", "ɐ", "🅐", "𝐚", "𝐀", "𝘢", "𝘈", "𝙖", "𝘼", "𝒶", "𝓪", "𝓐", "𝕒", "𝔸", "𝔞", "𝔄", "𝖆", "𝕬", "🄰", "🅰", "𝒜", "𝚊", "𝙰", "ꍏ", "а", "𝓪"],
 	b: ["b", "8", "ᗷ", "B", "ⓑ", "Ⓑ", "в", "฿", "ḅ", "Ḅ", "Ᏸ", "ϐ", "Ɓ", "ḃ", "Ḃ", "ɮ", "ｂ", "Ｂ", "ʙ", "🅑", "𝐛", "𝐁", "𝘣", "𝘉", "𝙗", "𝘽", "𝒷", "𝓫", "𝓑", "𝕓", "𝔹", "𝔟", "𝔅", "𝖇", "𝕭", "🄱", "🅱", "𝐵", "Ⴆ", "𝚋", "𝙱", "♭", "b"],
 	c: ["c", "ç", "ᑕ", "C", "ⓒ", "Ⓒ", "¢", "͏", "₵", "ċ", "Ċ", "ፈ", "ς", "ḉ", "Ḉ", "Ꮯ", "ƈ", "̾", "ｃ", "Ｃ", "ᴄ", "ɔ", "🅒", "𝐜", "𝐂", "𝘤", "𝘊", "𝙘", "𝘾", "𝒸", "𝓬", "𝓒", "𝕔", "ℂ", "𝔠", "ℭ", "𝖈", "𝕮", "🄲", "🅲", "𝒞", "𝚌", "𝙲", "☾", "с"],
 	d: ["d", "ᗪ", "D", "ⓓ", "Ⓓ", "∂", "Đ", "ď", "Ď", "Ꮄ", "Ḋ", "Ꭰ", "ɖ", "ｄ", "Ｄ", "ᴅ", "🅓", "𝐝", "𝐃", "𝘥", "𝘋", "𝙙", "𝘿", "𝒹", "𝓭", "𝓓", "𝕕", "​", "𝔡", "𝖉", "𝕯", "🄳", "🅳", "𝒟", "ԃ", "𝚍", "𝙳", "◗", "ⅾ"],
 	e: ["e", "3", "é", "ê", "E", "ⓔ", "Ⓔ", "є", "͏", "Ɇ", "ệ", "Ệ", "Ꮛ", "ε", "Σ", "ḕ", "Ḕ", "Ꭼ", "ɛ", "̾", "ｅ", "Ｅ", "ᴇ", "ǝ", "🅔", "𝐞", "𝐄", "𝘦", "𝘌", "𝙚", "𝙀", "ℯ", "𝓮", "𝓔", "𝕖", "𝔻", "𝔢", "𝔇", "𝖊", "𝕰", "🄴", "🅴", "𝑒", "𝐸", "ҽ", "𝚎", "𝙴", "€", "е", "ё", "𝓮"],
-	f: ["f", "ᖴ", "F", "ⓕ", "Ⓕ", "₣", "ḟ", "Ḟ", "Ꭶ", "ғ", "ʄ", "ｆ", "Ｆ", "ɟ", "🅕", "𝐟", "𝐅", "𝘧", "𝘍", "𝙛", "𝙁", "𝒻", "𝓯", "𝓕", "𝕗", "𝔼", "𝔣", "𝔈", "𝖋", "𝕱", "🄵", "🅵", "𝐹", "ϝ", "𝚏", "𝙵", "Ϝ", "f"],
+	f: ["f", "ᖴ", "F", "ⓕ", "Ⓕ", "₣", "ḟ", "Ḟ", "Ꭶ", "ғ", "ʄ", "ｆ", "Ｆ", "ɟ", "🅕", "𝐟", "𝐅", "𝘧", "𝘍", "𝙛", "𝙁", "𝒻", "𝓯", "𝓕", "𝕗", "𝔼", "𝔣", "𝔈", "𝖋", "𝕱", "🄵", "🅵", "𝐹", "ϝ", "𝚏", "𝙵", "Ϝ", "f", "Ƒ"],
 	g: ["g", "q", "6", "9", "G", "ⓖ", "Ⓖ", "͏", "₲", "ġ", "Ġ", "Ꮆ", "ϑ", "Ḡ", "ɢ", "̾", "ｇ", "Ｇ", "ƃ", "🅖", "𝐠", "𝐆", "𝘨", "𝘎", "𝙜", "𝙂", "ℊ", "𝓰", "𝓖", "𝕘", "𝔽", "𝔤", "𝔉", "𝖌", "𝕲", "🄶", "🅶", "𝑔", "𝒢", "ɠ", "𝚐", "𝙶", "❡", "ց", "𝙶", "𝓰", "Ԍ"],
 	h: [
 		"h", "ᕼ", "H", "ⓗ", "Ⓗ", "н", "Ⱨ", "ḧ", "Ḧ", "Ꮒ", "ɦ", "ｈ", "Ｈ", "ʜ", "ɥ", "🅗", "𝐡", "𝐇", "𝘩", "𝘏", "𝙝", "𝙃", "𝒽", "𝓱", "𝓗", "𝕙", "𝔾", "𝔥", "𝔊", "𝖍", "𝕳", "🄷", "🅷", "𝐻", "ԋ", "𝚑", "𝙷", "♄", "h",
@@ -44,11 +44,11 @@ const EVASION_DETECTION_SUBSTITUTIONS: {[k: string]: string[]} = {
 	z: ["z", "ᘔ", "Z", "ⓩ", "Ⓩ", "Ⱬ", "ẓ", "Ẓ", "ፚ", "Ꮓ", "ʐ", "ｚ", "Ｚ", "ᴢ", "🅩", "𝐳", "𝐙", "𝘻", "𝘡", "𝙯", "𝙕", "𝓏", "𝔃", "𝓩", "𝕫", "𝕋", "𝔷", "𝔙", "𝖟", "𝖅", "🅉", "🆉", "𝒵", "ȥ", "𝚣", "𝚉", "☡", "z", "𝔃"],
 };
 
-const filterWords: {[k: string]: Chat.FilterWord[]} = Chat.filterWords;
+const filterWords: { [k: string]: Chat.FilterWord[] } = Chat.filterWords;
 
 export const Filters = new class {
 	readonly EVASION_DETECTION_SUBSTITUTIONS = EVASION_DETECTION_SUBSTITUTIONS;
-	readonly EVASION_DETECTION_SUB_STRINGS: {[k: string]: string} = {};
+	readonly EVASION_DETECTION_SUB_STRINGS: { [k: string]: string } = {};
 	constructor() {
 		for (const letter in EVASION_DETECTION_SUBSTITUTIONS) {
 			this.EVASION_DETECTION_SUB_STRINGS[letter] = `[${EVASION_DETECTION_SUBSTITUTIONS[letter].join('')}]`;
@@ -82,20 +82,20 @@ export const Filters = new class {
 
 	save(force = false) {
 		FS(MONITOR_FILE).writeUpdate(() => {
-			const buf: {[k: string]: FilterWord[]} = {};
+			const buf: { [k: string]: FilterWord[] } = {};
 			for (const key in Chat.monitors) {
 				buf[key] = [];
 				for (const filterWord of filterWords[key]) {
-					const word = {...filterWord};
+					const word = { ...filterWord };
 					delete (word as any).regex; // no reason to save this. does not stringify.
 					buf[key].push(word);
 				}
 			}
 			return JSON.stringify(buf);
-		}, {throttle: force ? 0 : WRITE_THROTTLE_TIME});
+		}, { throttle: force ? 0 : WRITE_THROTTLE_TIME });
 	}
 
-	add(filterWord: Partial<Chat.FilterWord> & {list: string, word: string}) {
+	add(filterWord: Partial<Chat.FilterWord> & { list: string, word: string }) {
 		if (!filterWord.hits) filterWord.hits = 0;
 		const punishment = Chat.monitors[filterWord.list].punishment;
 		if (!filterWord.regex) {
@@ -175,7 +175,7 @@ export const Filters = new class {
 						regex = new RegExp(punishment === 'SHORTENER' ? `\\b${word}` : word, replacement ? 'igu' : 'iu');
 					}
 
-					const filterWord: FilterWord = {regex, word, hits: parseInt(times) || 0};
+					const filterWord: FilterWord = { regex, word, hits: parseInt(times) || 0 };
 
 					// "undefined" is the result of an issue with filter storage.
 					// As far as I'm aware, nothing is actually filtered with "undefined" as the reason.
@@ -201,7 +201,7 @@ Chat.registerMonitor('autolock', {
 	punishment: 'AUTOLOCK',
 	label: 'Autolock',
 	monitor(line, room, user, message, lcMessage, isStaff) {
-		const {regex, word, reason, publicReason} = line;
+		const { regex, word, reason, publicReason } = line;
 		const match = regex.exec(lcMessage);
 		if (match) {
 			if (isStaff) return `${message} __[would be locked: ${word}${reason ? ` (${reason})` : ''}]__`;
@@ -225,7 +225,7 @@ Chat.registerMonitor('publicwarn', {
 	punishment: 'WARN',
 	label: 'Filtered in public',
 	monitor(line, room, user, message, lcMessage, isStaff) {
-		const {regex, word, reason, publicReason} = line;
+		const { regex, word, reason, publicReason } = line;
 		const match = regex.exec(lcMessage);
 		if (match) {
 			if (isStaff) return `${message} __[would be filtered in public: ${word}${reason ? ` (${reason})` : ''}]__`;
@@ -240,7 +240,7 @@ Chat.registerMonitor('warn', {
 	punishment: 'WARN',
 	label: 'Filtered',
 	monitor(line, room, user, message, lcMessage, isStaff) {
-		const {regex, word, reason, publicReason} = line;
+		const { regex, word, reason, publicReason } = line;
 		const match = regex.exec(lcMessage);
 		if (match) {
 			if (isStaff) return `${message} __[would be filtered: ${word}${reason ? ` (${reason})` : ''}]__`;
@@ -255,7 +255,7 @@ Chat.registerMonitor('evasion', {
 	punishment: 'EVASION',
 	label: 'Filter Evasion Detection',
 	monitor(line, room, user, message, lcMessage, isStaff) {
-		const {regex, word, reason, publicReason} = line;
+		const { regex, word, reason, publicReason } = line;
 
 		// Many codepoints used in filter evasion detection can be decomposed
 		// into multiple codepoints that are canonically equivalent to the
@@ -296,7 +296,7 @@ Chat.registerMonitor('wordfilter', {
 	label: 'Filtered to a different phrase',
 	condition: 'notStaff',
 	monitor(line, room, user, message, lcMessage, isStaff) {
-		const {regex, replacement} = line;
+		const { regex, replacement } = line;
 		let match = regex.exec(message);
 		while (match) {
 			let filtered = replacement || '';
@@ -322,7 +322,7 @@ Chat.registerMonitor('battlefilter', {
 	punishment: 'MUTE',
 	label: 'Filtered in battles',
 	monitor(line, room, user, message, lcMessage, isStaff) {
-		const {regex, word, reason, publicReason} = line;
+		const { regex, word, reason, publicReason } = line;
 		const match = regex.exec(lcMessage);
 		if (match) {
 			if (isStaff) return `${message} __[would be filtered: ${word}${reason ? ` (${reason})` : ''}]__`;
@@ -353,7 +353,7 @@ Chat.registerMonitor('shorteners', {
 	label: 'URL Shorteners',
 	condition: 'notTrusted',
 	monitor(line, room, user, message, lcMessage, isStaff) {
-		const {regex, word, publicReason} = line;
+		const { regex, word, publicReason } = line;
 		if (regex.test(lcMessage)) {
 			if (isStaff) return `${message} __[shortener: ${word}]__`;
 			this.errorReply(`Please do not use URL shorteners such as '${word}'${publicReason ? ` ${publicReason}` : ``}.`);
@@ -369,8 +369,6 @@ Chat.registerMonitor('shorteners', {
  * Punishment: AUTOLOCK, WARN, FILTERTO, SHORTENER, MUTE, EVASION
  */
 
-/* The sucrase transformation of optional chaining is too expensive to be used in a hot function like this. */
-/* eslint-disable @typescript-eslint/prefer-optional-chain */
 export const chatfilter: Chat.ChatFilter = function (message, user, room) {
 	let lcMessage = message
 		.replace(/\u039d/g, 'N').toLowerCase()
@@ -384,15 +382,15 @@ export const chatfilter: Chat.ChatFilter = function (message, user, room) {
 	lcMessage = lcMessage.replace(/__|\*\*|``|\[\[|\]\]/g, '');
 
 	const isStaffRoom = room && (
-		(room.persist && room.roomid.endsWith('staff')
-		) || room.roomid.startsWith('help-'));
-	const isStaff = isStaffRoom || user.isStaff || !!(this.pmTarget && this.pmTarget.isStaff);
+		(room.persist && room.roomid.endsWith('staff')) || room.roomid.startsWith('help-')
+	);
+	const isStaff = isStaffRoom || user.isStaff || !!this.pmTarget?.isStaff;
 
 	for (const list in Chat.monitors) {
-		const {location, condition, monitor} = Chat.monitors[list];
+		const { location, condition, monitor } = Chat.monitors[list];
 		if (!monitor) continue;
 		// Ignore challenge games, which are unrated and not part of roomtours.
-		if (location === 'BATTLES' && !(room && room.battle && room.battle.challengeType !== 'challenge')) continue;
+		if (location === 'BATTLES' && !(room?.battle && room.battle.challengeType !== 'challenge')) continue;
 		if (location === 'PUBLIC' && room && room.settings.isPrivate === true) continue;
 
 		switch (condition) {
@@ -418,17 +416,15 @@ export const chatfilter: Chat.ChatFilter = function (message, user, room) {
 		}
 	}
 
-
 	return message;
 };
-/* eslint-enable @typescript-eslint/prefer-optional-chain */
 
 export const namefilter: Chat.NameFilter = (name, user) => {
 	const id = toID(name);
 	if (Punishments.namefilterwhitelist.has(id)) return name;
 	if (Monitor.forceRenames.has(id)) {
 		if (typeof Monitor.forceRenames.get(id) === 'number') {
-			// we check this for hotpatching reasons, since on the initial chat patch this will still be a Utils.MultiSet
+			// we check this for hotpatching reasons, since on the initial chat patch this will still be a Utils.Multiset
 			// we're gonna assume no one has seen it since that covers people who _haven't_ actually, and those who have
 			// likely will not be attempting to log into it
 			Monitor.forceRenames.set(id, false);
@@ -502,10 +498,10 @@ export const nicknamefilter: Chat.NicknameFilter = (name, user) => {
 	lcName = lcName.replace('herapist', '').replace('grape', '').replace('scrape', '');
 
 	for (const list in filterWords) {
-	        if (!Chat.monitors[list]) continue;
+		if (!Chat.monitors[list]) continue;
 		if (Chat.monitors[list].location === 'BATTLES') continue;
 		for (const line of filterWords[list]) {
-			let {regex, word} = line;
+			let { regex, word } = line;
 			if (Chat.monitors[list].punishment === 'EVASION') {
 				// Evasion banwords by default require whitespace on either side.
 				// If we didn't remove it here, it would be quite easy to evade the filter
@@ -548,7 +544,7 @@ export const statusfilter: Chat.StatusFilter = (status, user) => {
 	// Remove false positives.
 	lcStatus = lcStatus.replace('herapist', '').replace('grape', '').replace('scrape', '');
 	// Check for blatant staff impersonation attempts. Ideally this could be completely generated from Config.grouplist
-	// for better support for side servers, but not all ranks are staff ranks or should necessarily be filted.
+	// for better support for side servers, but not all ranks are staff ranks or should necessarily be filtered.
 	const impersonationRegex = /\b(?:global|room|upper|senior)?\s*(?:staff|admin|administrator|leader|owner|founder|mod|moderator|driver|voice|operator|sysop|creator)\b/gi;
 	if (!user.can('lock') && impersonationRegex.test(lcStatus)) return '';
 
@@ -587,7 +583,7 @@ export const pages: Chat.PageTable = {
 		for (const key in Chat.monitors) {
 			content += `<tr><th colspan="2"><h3>${Chat.monitors[key].label} <span style="font-size:8pt;">[${key}]</span></h3></tr></th>`;
 			if (filterWords[key].length) {
-				content += filterWords[key].map(({regex, word, reason, publicReason, replacement, hits}) => {
+				content += filterWords[key].map(({ regex, word, reason, publicReason, replacement, hits }) => {
 					let entry = Utils.html`<abbr title="${reason}"><code>${word}</code></abbr>`;
 					if (publicReason) entry += Utils.html` <small>(public reason: ${publicReason})</small>`;
 					if (replacement) entry += Utils.html` &rArr; ${replacement}`;
@@ -629,20 +625,20 @@ export const commands: Chat.ChatCommands = {
 			list = toID(list);
 
 			if (!list || !rest.length) {
-				return this.errorReply(`Syntax: /filter add list ${separator} word ${separator} reason [${separator} optional public reason]`);
+				throw new Chat.ErrorMessage(`Syntax: /filter add list ${separator} word ${separator} reason [${separator} optional public reason]`);
 			}
 
 			if (!(list in filterWords)) {
-				return this.errorReply(`Invalid list: ${list}. Possible options: ${Object.keys(filterWords).join(', ')}`);
+				throw new Chat.ErrorMessage(`Invalid list: ${list}. Possible options: ${Object.keys(filterWords).join(', ')}`);
 			}
 
-			const filterWord = {list, word: ''} as Partial<FilterWord> & {list: string, word: string};
+			const filterWord = { list, word: '' } as Partial<FilterWord> & { list: string, word: string };
 
 			rest = rest.map(part => part.trim());
 			if (Chat.monitors[list].punishment === 'FILTERTO') {
 				[filterWord.word, filterWord.replacement, filterWord.reason, filterWord.publicReason] = rest;
 				if (!filterWord.replacement) {
-					return this.errorReply(
+					throw new Chat.ErrorMessage(
 						`Syntax for word filters: /filter add ${list} ${separator} regex ${separator} reason [${separator} optional public reason]`
 					);
 				}
@@ -652,7 +648,7 @@ export const commands: Chat.ChatCommands = {
 
 			filterWord.word = filterWord.word.trim();
 			if (!filterWord.word) {
-				return this.errorReply(`Invalid word: '${filterWord.word}'.`);
+				throw new Chat.ErrorMessage(`Invalid word: '${filterWord.word}'.`);
 			}
 			Filters.add(filterWord);
 			const reason = filterWord.reason ? ` (${filterWord.reason})` : '';
@@ -671,15 +667,15 @@ export const commands: Chat.ChatCommands = {
 			let [list, ...words] = target.split(target.includes('\n') ? '\n' : ',').map(param => param.trim());
 			list = toID(list);
 
-			if (!list || !words.length) return this.errorReply("Syntax: /filter remove list, words");
+			if (!list || !words.length) throw new Chat.ErrorMessage("Syntax: /filter remove list, words");
 
 			if (!(list in filterWords)) {
-				return this.errorReply(`Invalid list: ${list}. Possible options: ${Object.keys(filterWords).join(', ')}`);
+				throw new Chat.ErrorMessage(`Invalid list: ${list}. Possible options: ${Object.keys(filterWords).join(', ')}`);
 			}
 
 			const notFound = words.filter(val => !filterWords[list].filter(entry => entry.word === val).length);
 			if (notFound.length) {
-				return this.errorReply(`${notFound.join(', ')} ${Chat.plural(notFound, "are", "is")} not on the ${list} list.`);
+				throw new Chat.ErrorMessage(`${notFound.join(', ')} ${Chat.plural(notFound, "are", "is")} not on the ${list} list.`);
 			}
 			filterWords[list] = filterWords[list].filter(entry => !words.includes(entry.word));
 
@@ -742,22 +738,22 @@ export const commands: Chat.ChatCommands = {
 		},
 		testhelp: [
 			`/filter test [test string] - Tests whether or not the provided test string would trigger any of the chat monitors.`,
-			`Requires: % @ &`,
+			`Requires: % @ ~`,
 		],
 	},
 	filterhelp: [
-		`/filter add list, word, reason[, optional public reason] - Adds a word to the given filter list. Requires: &`,
-		`/filter remove list, words - Removes words from the given filter list. Requires: &`,
-		`/filter view - Opens the list of filtered words. Requires: % @ &`,
-		`/filter test [test string] - Tests whether or not the provided test string would trigger any of the chat monitors. Requires: % @ &`,
+		`/filter add list, word, reason[, optional public reason] - Adds a word to the given filter list. Requires: ~`,
+		`/filter remove list, words - Removes words from the given filter list. Requires: ~`,
+		`/filter view - Opens the list of filtered words. Requires: % @ ~`,
+		`/filter test [test string] - Tests whether or not the provided test string would trigger any of the chat monitors. Requires: % @ ~`,
 		`You may use / instead of , in /filter add if you want to specify a reason that includes commas.`,
 	],
 	allowname(target, room, user) {
 		this.checkCan('forcerename');
 		target = toID(target);
-		if (!target) return this.errorReply(`Syntax: /allowname username`);
+		if (!target) throw new Chat.ErrorMessage(`Syntax: /allowname username`);
 		if (Punishments.namefilterwhitelist.has(target)) {
-			return this.errorReply(`${target} is already allowed as a username.`);
+			throw new Chat.ErrorMessage(`${target} is already allowed as a username.`);
 		}
 
 		const msg = `${target} was allowed as a username by ${user.name}.`;
@@ -771,6 +767,6 @@ export const commands: Chat.ChatCommands = {
 	},
 };
 
-process.nextTick(() => {
+export function start() {
 	Chat.multiLinePattern.register('/filter (add|remove) ');
-});
+}

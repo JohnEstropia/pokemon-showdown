@@ -9,7 +9,7 @@ interface TagData {
 	genericNumCol?: (thing: Species | Move | Item | Ability) => number;
 }
 
-export const Tags: {[id: string]: TagData} = {
+export const Tags: { [id: IDEntry]: TagData } = {
 	// Categories
 	// ----------
 	physical: {
@@ -45,6 +45,10 @@ export const Tags: {[id: string]: TagData} = {
 	restrictedlegendary: {
 		name: "Restricted Legendary",
 		speciesFilter: species => species.tags.includes("Restricted Legendary"),
+	},
+	ultrabeast: {
+		name: "Ultra Beast",
+		speciesFilter: species => species.tags.includes("Ultra Beast"),
 	},
 	paradox: {
 		name: "Paradox",
@@ -130,7 +134,7 @@ export const Tags: {[id: string]: TagData} = {
 	// -----
 	uber: {
 		name: "Uber",
-		speciesFilter: species => species.tier === 'Uber' || species.tier === '(Uber)' || species.tier === 'AG',
+		speciesFilter: species => species.tier === 'Uber' || species.tier === 'AG' || species.tier === '(AG)',
 	},
 	ou: {
 		name: "OU",
@@ -166,7 +170,7 @@ export const Tags: {[id: string]: TagData} = {
 	},
 	pu: {
 		name: "PU",
-		speciesFilter: species => species.tier === 'PU' || species.tier === '(NU)',
+		speciesFilter: species => species.tier === 'PU',
 	},
 	zubl: {
 		name: "ZUBL",
@@ -174,7 +178,7 @@ export const Tags: {[id: string]: TagData} = {
 	},
 	zu: {
 		name: "ZU",
-		speciesFilter: species => species.tier === '(PU)' || species.tier === 'ZU',
+		speciesFilter: species => species.tier === 'ZU',
 	},
 	nfe: {
 		name: "NFE",
@@ -198,7 +202,7 @@ export const Tags: {[id: string]: TagData} = {
 	},
 	ag: {
 		name: "AG",
-		speciesFilter: species => species.tier === 'AG',
+		speciesFilter: species => species.tier === 'AG' || species.tier === '(AG)',
 	},
 
 	// Doubles tiers
@@ -228,11 +232,11 @@ export const Tags: {[id: string]: TagData} = {
 	// -------------
 	ndag: {
 		name: "ND AG",
-		speciesFilter: species => species.natDexTier === 'AG',
+		speciesFilter: species => species.natDexTier === 'AG' || species.natDexTier === '(AG)',
 	},
 	nduber: {
 		name: "ND Uber",
-		speciesFilter: species => species.natDexTier === 'Uber' || species.natDexTier === '(Uber)',
+		speciesFilter: species => species.natDexTier === 'Uber',
 	},
 	ndou: {
 		name: "ND OU",
@@ -253,6 +257,14 @@ export const Tags: {[id: string]: TagData} = {
 	ndru: {
 		name: "ND RU",
 		speciesFilter: species => species.natDexTier === 'RU',
+	},
+	ndnfe: {
+		name: "ND NFE",
+		speciesFilter: species => species.natDexTier === 'NFE',
+	},
+	ndlc: {
+		name: "ND LC",
+		speciesFilter: species => species.natDexTier === 'LC',
 	},
 
 	// Legality tags
