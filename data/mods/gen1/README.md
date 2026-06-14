@@ -10,7 +10,7 @@ There were only 151 Pokémon plus MissingNo, just a handful of moves, no abiliti
 EVd to the max and we had some kind of different IVs, which maxed at 15 and every point gave 2 to the stat, so in
 a similar fashion, Pokes used to have 30 IVs on each stat.
 
-The following sources have been used and extremly useful when developing this mod:
+The following sources have been used and extremely useful when developing this mod:
 https://raw.github.com/po-devs/pokemon-online/master/bin/database/rby-stuff.txt
 https://www.smogon.com/rb/articles/differences
 https://www.smogon.com/forums/threads/past-gens-research-thread.3506992/#post-5878612
@@ -53,3 +53,6 @@ Partial trapping moves let either Pokémon switch but target will be unable to m
 TODO. Glitches not implemented
 ------------------------------
 There are a couple of divisions by zero in the original game in the cartridge. Those have not been implemented.
+
+If a Pokemon has its sleep or freeze status healed by Haze, it will not be able to move on that turn (skip turn glitch).
+This also applies to a frozen Pokemon that has just been thawed by a fire type move.

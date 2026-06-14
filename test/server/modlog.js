@@ -1,183 +1,169 @@
 /**
- * Tests for server/modlog.ts
+ * Tests for the modlog
  * Written by Annika
  */
 
 'use strict';
 
-const ModlogConstructor = Config.usesqlite ? (require('../../server/modlog')).Modlog : null;
-const modlog = ModlogConstructor ? new ModlogConstructor('/dev/null', ':memory:') : null;
 const assert = require('assert').strict;
 
-Config.usesqlitemodlog = true;
-
 const DATASET_A = [
-	{action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'FIRST ENTRY', time: 1},
-	{action: 'LOCK', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'ENTRY 2', time: 2},
-	{action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'ENTRY 3', time: 3},
-	{action: 'WEEKLOCK', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'this entry has many parts', time: 4},
-	{action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'ENTRY 5', time: 5},
-	{action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'ENTRY 6', time: 6},
-	{action: 'MUTE', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'ENTRY 7', time: 7},
-	{action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'ENTRY 8', time: 8},
-	{action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'LAST ENTRY', time: 9},
+	{ action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'FIRST ENTRY', time: 1 },
+	{ action: 'LOCK', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'ENTRY 2', time: 2 },
+	{ action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'ENTRY 3', time: 3 },
+	{ action: 'WEEKLOCK', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'this entry has many parts', time: 4 },
+	{ action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'ENTRY 5', time: 5 },
+	{ action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'ENTRY 6', time: 6 },
+	{ action: 'MUTE', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'ENTRY 7', time: 7 },
+	{ action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'ENTRY 8', time: 8 },
+	{ action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika', note: 'LAST ENTRY', time: 9 },
 ];
 
 const DATASET_B = [
-	{action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika'},
-	{action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika'},
-	{action: 'POLL', loggedBy: 'annika'},
-	{action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika'},
-	{action: 'TOUR START', loggedBy: 'annika'},
+	{ action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika' },
+	{ action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika' },
+	{ action: 'POLL', loggedBy: 'annika' },
+	{ action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', loggedBy: 'annika' },
+	{ action: 'TOUR START', loggedBy: 'annika' },
 ];
 
-function lastLine(database, roomid) {
-	return database.prepare(
+async function lastLine(database, roomid) {
+	const prepared = await database.prepare(
 		`SELECT * FROM modlog WHERE roomid = ? ORDER BY modlog_id DESC LIMIT 1`
-	).get(roomid);
+	);
+	return database.get(prepared, [roomid]);
 }
 
-(Config.usesqlite ? describe : describe.skip)('Modlog', () => {
-	describe.skip('Modlog#prepareSQLSearch', () => {
-		it('should respect the maxLines parameter', () => {
-			const query = modlog.prepareSQLSearch(['lobby'], 1337, false, {});
-			assert(query.statement.source.endsWith('LIMIT ?'));
+(Config.usesqlite && Config.usesqlitemodlog ? describe : describe.skip)('Modlog', () => {
+	before(async () => {
+		if (Rooms.Modlog.readyPromise) {
+			await Rooms.Modlog.readyPromise;
+		}
+		if (!Rooms.Modlog.databaseReady) throw new Error(`Failed to ready up modlog database`);
+	});
+
+	describe('Modlog#prepareSQLSearch', () => {
+		it('should respect the maxLines parameter', async () => {
+			const query = Rooms.Modlog.prepareSQLSearch(['lobby'], 1337, false, { note: [], user: [], ip: [], action: [], actionTaker: [] });
+			assert(query.queryText.endsWith('LIMIT ?'));
 			assert(query.args.includes(1337));
 
-			const noMaxLines = modlog.prepareSQLSearch(['lobby'], 0, false, {}).statement;
-			assert(!noMaxLines.source.toUpperCase().includes('LIMIT'));
+			const noMaxLines = Rooms.Modlog.prepareSQLSearch(['lobby'], 0, false, { note: [], user: [], ip: [], action: [], actionTaker: [] });
+			assert(!noMaxLines.queryText.includes('LIMIT'));
 		});
 
-		it('should attempt to respect onlyPunishments', () => {
-			const query = modlog.prepareSQLSearch(['lobby'], 0, true, {});
-			assert(query.statement.source.includes('action IN ('));
+		it('should attempt to respect onlyPunishments', async () => {
+			const query = Rooms.Modlog.prepareSQLSearch(['lobby'], 0, true, { note: [], user: [], ip: [], action: [], actionTaker: [] });
+			assert(query.queryText.includes('action IN ('));
 			assert(query.args.includes('WEEKLOCK'));
 		});
 	});
 
-	(Config.usesqlite ? describe : describe.skip)('Modlog#getSharedID', () => {
+	describe('Modlog#getSharedID', () => {
 		it('should detect shared modlogs', () => {
-			assert(modlog.getSharedID('battle-gen8randombattle-42'));
-			assert(modlog.getSharedID('groupchat-annika-shitposting'));
-			assert(modlog.getSharedID('help-mePleaseIAmTrappedInAUnitTestFactory'));
+			assert(Rooms.Modlog.getSharedID('battle-gen8randombattle-42'));
+			assert(Rooms.Modlog.getSharedID('groupchat-annika-shitposting'));
+			assert(Rooms.Modlog.getSharedID('help-mePleaseIAmTrappedInAUnitTestFactory'));
 
-			assert(!modlog.getSharedID('1v1'));
-			assert(!modlog.getSharedID('development'));
+			assert(!Rooms.Modlog.getSharedID('1v1'));
+			assert(!Rooms.Modlog.getSharedID('development'));
 		});
 	});
 
-	(Config.usesqlite ? describe : describe.skip)('Modlog#write', () => {
+	describe('Modlog#write', () => {
 		it('should write messages serially to the modlog', async () => {
-			modlog.initialize('development');
-			modlog.write('development', {note: 'This message is logged first', action: 'UNITTEST'});
-			modlog.write('development', {note: 'This message is logged second', action: 'UNITTEST'});
-			const lines = modlog.database.prepare(
+			await Rooms.Modlog.write('development', { note: 'This message is logged first', action: 'UNITTEST' });
+			await Rooms.Modlog.write('development', { note: 'This message is logged second', action: 'UNITTEST' });
+			const lines = await Rooms.Modlog.database.all(await Rooms.Modlog.database.prepare(
 				// Order by modlog_id since the writes most likely happen at the same second
 				`SELECT * FROM modlog WHERE roomid = 'development' ORDER BY modlog_id DESC LIMIT 2`
-			).all();
+			));
 
 			assert.equal(lines.pop().note, 'This message is logged first');
 			assert.equal(lines.pop().note, 'This message is logged second');
 		});
 
-		it('should throw an error when writing to a destroyed modlog stream', () => {
-			modlog.initialize('somedeletedroom');
-			assert.doesNotThrow(() => modlog.write('somedeletedroom', {action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', staff: 'annika'}));
-			modlog.destroy('somedeletedroom');
-			assert.throws(() => modlog.write('somedeletedroom', {action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', staff: 'annika'}));
-		});
-
-		it('should throw an error when writing to an uninitialized modlog stream', () => {
-			assert.throws(() => modlog.write('lmaothisroomisntreal', {action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', staff: 'annika'}));
-			modlog.initialize('itsrealnow');
-			assert.doesNotThrow(() => modlog.write('itsrealnow', {action: 'ROOMBAN', userid: 'sometroll', ip: '127.0.0.1', staff: 'annika'}));
-		});
-
-
 		it('should use overrideID if specified', async () => {
-			modlog.initialize('battle-gen8randombattle-1337');
-			modlog.write('battle-gen8randombattle-1337', {note: "I'm testing overrideID", action: 'UNITTEST'}, 'heyadora');
-			const line = lastLine(modlog.database, 'battle-gen8randombattle-1337');
+			await Rooms.Modlog.write('battle-gen8randombattle-1337', { note: "I'm testing overrideID", action: 'UNITTEST' }, 'heyadora');
+			const line = await lastLine(Rooms.Modlog.database, 'battle-gen8randombattle-1337');
 			assert.equal(line.note, "I'm testing overrideID");
 			assert.equal(line.visual_roomid, 'heyadora');
 		});
 	});
 
-	(Config.usesqlite ? describe : describe.skip)("Modlog#rename", () => {
+	describe("Modlog#rename", () => {
 		it('should rename modlogs', async () => {
-			const entry = {note: 'This is in a modlog that will be renamed!', action: 'UNITTEST'};
+			const entry = { note: 'This is in a modlog that will be renamed!', action: 'UNITTEST' };
 
-			modlog.initialize('oldroom');
-			modlog.write('oldroom', entry);
-			await modlog.rename('oldroom', 'newroom');
-			const line = lastLine(modlog.database, 'newroom');
+			await Rooms.Modlog.write('oldroom', entry);
+			await Rooms.Modlog.rename('oldroom', 'newroom');
+			const line = await lastLine(Rooms.Modlog.database, 'newroom');
 
 			assert.equal(entry.action, line.action);
 			assert.equal(entry.note, line.note);
 
-			const newEntry = {note: 'This modlog has been renamed!', action: 'UNITTEST'};
-			modlog.write('newroom', newEntry);
+			const newEntry = { note: 'This modlog has been renamed!', action: 'UNITTEST' };
+			await Rooms.Modlog.write('newroom', newEntry);
 
-			const newLine = lastLine(modlog.database, 'newroom');
+			const newLine = await lastLine(Rooms.Modlog.database, 'newroom');
 
 			assert.equal(newEntry.action, newLine.action);
 			assert.equal(newEntry.note, newLine.note);
 		});
 	});
 
-	// Skipped until SQL searching is properly implemented
-	describe.skip('Modlog#search', () => {
+	describe('Modlog#search', () => {
 		before(async () => {
-			modlog.initialize('readingtest');
-			modlog.initialize('readingtest2');
 			for (const entry of DATASET_A) {
-				modlog.write('readingtest', entry);
+				await Rooms.Modlog.write('readingtest', entry);
 			}
 			for (const entry of DATASET_B) {
-				modlog.write('readingtest2', entry);
+				await Rooms.Modlog.write('readingtest2', entry);
 			}
 		});
 
 		it('should be capable of reading the entire modlog file', async () => {
-			const results = await modlog.search('readingtest2', {}, 10000);
+			const results = await Rooms.Modlog.search('readingtest2', { note: [], user: [], ip: [], action: [], actionTaker: [] }, 10000);
 			assert.equal(results.results.length, DATASET_B.length);
 		});
 
 		it('user searches should be case-insensitive', async () => {
-			const notExactUpper = await modlog.search('readingtest', {user: {search: 'sOmETRoll', isExact: false}});
-			const notExactLower = await modlog.search('readingtest', {user: {search: 'sometroll', isExact: false}});
-			const exactUpper = await modlog.search('readingtest', {user: {search: 'sOMEtroLL', isExact: true}});
-			const exactLower = await modlog.search('readingtest', {user: {search: 'sometroll', isExact: true}});
+			const notExactUpper = await Rooms.Modlog.search('readingtest', { user: [{ search: 'sOmETRoll', isExact: false }], note: [], ip: [], action: [], actionTaker: [] });
+			const notExactLower = await Rooms.Modlog.search('readingtest', { user: [{ search: 'sometroll', isExact: false }], note: [], ip: [], action: [], actionTaker: [] });
+			const exactUpper = await Rooms.Modlog.search('readingtest', { user: [{ search: 'sOMEtroLL', isExact: true }], note: [], ip: [], action: [], actionTaker: [] });
+			const exactLower = await Rooms.Modlog.search('readingtest', { user: [{ search: 'sometroll', isExact: true }], note: [], ip: [], action: [], actionTaker: [] });
 
 			assert.deepEqual(notExactUpper.results, notExactLower.results);
 			assert.deepEqual(exactUpper.results, exactLower.results);
 		});
 
+		// isExact is currently set up to search for the entire note equalling the search
+		// this could be redesigned, but is what we currently test for.
 		it('note searches should respect isExact', async () => {
-			const notExact = await modlog.search('readingtest', {note: {searches: ['has man'], isExact: false}});
-			const exact = await modlog.search('readingtest', {note: {searches: ['has man'], isExact: true}});
-			assert.equal(notExact.results.length, 0);
-			assert(exact.results.length);
+			const notExact = await Rooms.Modlog.search('readingtest', { note: [{ search: 'has man', isExact: false }], user: [], ip: [], action: [], actionTaker: [] });
+			const exact = await Rooms.Modlog.search('readingtest', { note: [{ search: 'has man', isExact: true }], user: [], ip: [], action: [], actionTaker: [] });
+
+			assert.equal(exact.results.length, 0);
+			assert(notExact.results.length);
 		});
 
-		it.skip('should be LIFO (last-in, first-out)', async () => {
-			modlog.initialize('lifotest');
+		it('should be LIFO (last-in, first-out)', async () => {
+			await Rooms.Modlog.write('lifotest', { note: 'firstwrite', action: 'UNITTEST', timestamp: 1 });
+			await Rooms.Modlog.write('lifotest', { note: 'secondwrite', action: 'UNITTEST', timestamp: 2 });
+			const search = await Rooms.Modlog.search('lifotest');
 
-			modlog.write('lifotest', {note: 'firstwrite', action: 'UNITTEST', timestamp: 1});
-			modlog.write('lifotest', {note: 'secondwrite', action: 'UNITTEST', timestamp: 2});
-			const search = await modlog.search('lifotest');
-			assert.equal(search.results.length, 2);
+			// secondwrite was last in, so it should be first out (results[0])
+			assert.notEqual(search.results[0].note, 'firstwrite');
+			assert.equal(search.results[0].note, 'secondwrite');
 
-			assert.notEqual(search.results[0].note, 'secondwrite');
-			assert.equal(search.results[0].note, 'firstwrite');
-
-			assert.notEqual(search.results[1].note, 'firstwrite');
-			assert.equal(search.results[1].note, 'secondwrite');
+			// firstwrite was first in, so it should be last out (results[1])
+			assert.notEqual(search.results[1].note, 'secondwrite');
+			assert.equal(search.results[1].note, 'firstwrite');
 		});
 
 		it('should support limiting the number of responses', async () => {
-			const unlimited = await modlog.search('readingtest');
-			const limited = await modlog.search('readingtest', {}, 5);
+			const unlimited = await Rooms.Modlog.search('readingtest');
+			const limited = await Rooms.Modlog.search('readingtest', { note: [], user: [], ip: [], action: [], actionTaker: [] }, 5);
 
 			assert.equal(limited.results.length, 5);
 			assert(unlimited.results.length > limited.results.length);
@@ -193,8 +179,8 @@ function lastLine(database, roomid) {
 		});
 
 		it('should support filtering out non-punishment-related logs', async () => {
-			const all = (await modlog.search('readingtest2', {}, 20, false)).results;
-			const onlyPunishments = (await modlog.search('readingtest2', {}, 20, true)).results;
+			const all = (await Rooms.Modlog.search('readingtest2', { note: [], user: [], ip: [], action: [], actionTaker: [] }, 20, false)).results;
+			const onlyPunishments = (await Rooms.Modlog.search('readingtest2', { note: [], user: [], ip: [], action: [], actionTaker: [] }, 20, true)).results;
 
 			assert(all.length > onlyPunishments.length);
 			assert.equal(

@@ -1,4 +1,4 @@
-export const Conditions: {[k: string]: ModdedConditionData} = {
+export const Conditions: import('../../../sim/dex-conditions').ModdedConditionDataTable = {
 	brn: {
 		name: 'brn',
 		effectType: 'Status',
@@ -24,12 +24,9 @@ export const Conditions: {[k: string]: ModdedConditionData} = {
 			if (this.randomChance(63, 256)) {
 				this.add('cant', pokemon, 'par');
 				pokemon.removeVolatile('bide');
-				pokemon.removeVolatile('lockedmovee');
+				pokemon.removeVolatile('lockedmove');
 				pokemon.removeVolatile('twoturnmove');
-				pokemon.removeVolatile('fly');
-				pokemon.removeVolatile('dig');
-				pokemon.removeVolatile('solarbeam');
-				pokemon.removeVolatile('skullbash');
+				pokemon.removeVolatile('invulnerability');
 				pokemon.removeVolatile('partialtrappinglock');
 				return false;
 			}
@@ -40,13 +37,17 @@ export const Conditions: {[k: string]: ModdedConditionData} = {
 		effectType: 'Status',
 		onStart(target, source, sourceEffect) {
 			if (sourceEffect && sourceEffect.effectType === 'Move') {
-				this.add('-status', target, 'slp', '[from] move: ' + sourceEffect.name);
+				this.add('-status', target, 'slp', `[from] move: ${sourceEffect.name}`);
 			} else {
 				this.add('-status', target, 'slp');
 			}
 			// 1-3 turns
 			this.effectState.startTime = this.random(1, 4);
 			this.effectState.time = this.effectState.startTime;
+
+			if (target.removeVolatile('nightmare')) {
+				this.add('-end', target, 'Nightmare', '[silent]');
+			}
 		},
 		onBeforeMovePriority: 2,
 		onBeforeMove(pokemon, target, move) {
@@ -91,30 +92,23 @@ export const Conditions: {[k: string]: ModdedConditionData} = {
 			this.damage(this.clampIntRange(Math.floor(pokemon.maxhp / 16), 1));
 		},
 	},
-	tox: {
-		name: 'tox',
-		effectType: 'Status',
+	confusion: {
+		inherit: true,
 		onStart(target) {
-			this.add('-status', target, 'tox');
+			this.add('-start', target, 'confusion');
+			this.effectState.time = this.random(2, 6);
 		},
-		onAfterMoveSelfPriority: 2,
-		onAfterMoveSelf(pokemon) {
-			this.damage(this.clampIntRange(Math.floor(pokemon.maxhp / 16), 1));
-		},
-		onAfterSwitchInSelf(pokemon) {
-			// Regular poison status and damage after a switchout -> switchin.
-			pokemon.setStatus('psn');
-			pokemon.addVolatile('residualdmg');
-			pokemon.volatiles['residualdmg'].counter = 1;
-			this.damage(this.clampIntRange(Math.floor(pokemon.maxhp / 16), 1));
-		},
+	},
+	flinch: {
+		inherit: true,
+		onStart: undefined, // no inherit
 	},
 	partiallytrapped: {
 		name: 'partiallytrapped',
 		duration: 2,
 		onBeforeMovePriority: 1,
 		onStart(target, source, effect) {
-			this.add('-activate', target, 'move: ' + effect, '[of] ' + source);
+			this.add('-activate', target, `move: ${effect}`, `[of] ${source}`);
 		},
 		onBeforeMove(pokemon) {
 			if (this.effectState.source && (!this.effectState.source.isActive || this.effectState.source.hp <= 0)) {

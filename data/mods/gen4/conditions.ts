@@ -1,4 +1,4 @@
-export const Conditions: {[k: string]: ModdedConditionData} = {
+export const Conditions: import('../../../sim/dex-conditions').ModdedConditionDataTable = {
 	brn: {
 		inherit: true,
 		onResidualOrder: 10,
@@ -6,6 +6,12 @@ export const Conditions: {[k: string]: ModdedConditionData} = {
 	},
 	par: {
 		inherit: true,
+		onModifySpe(spe, pokemon) {
+			if (!pokemon.hasAbility('quickfeet')) {
+				return this.chainModify(0.25);
+			}
+			return spe;
+		},
 		onBeforeMove(pokemon) {
 			if (!pokemon.hasAbility('magicguard') && this.randomChance(1, 4)) {
 				this.add('cant', pokemon, 'par');
@@ -18,12 +24,16 @@ export const Conditions: {[k: string]: ModdedConditionData} = {
 		effectType: 'Status',
 		onStart(target, source, sourceEffect) {
 			if (sourceEffect && sourceEffect.effectType === 'Move') {
-				this.add('-status', target, 'slp', '[from] move: ' + sourceEffect.name);
+				this.add('-status', target, 'slp', `[from] move: ${sourceEffect.name}`);
 			} else {
 				this.add('-status', target, 'slp');
 			}
 			// 1-4 turns
 			this.effectState.time = this.random(2, 6);
+
+			if (target.removeVolatile('nightmare')) {
+				this.add('-end', target, 'Nightmare', '[silent]');
+			}
 		},
 		onBeforeMovePriority: 10,
 		onBeforeMove(pokemon, target, move) {
@@ -105,6 +115,10 @@ export const Conditions: {[k: string]: ModdedConditionData} = {
 		},
 		onResidualOrder: 10,
 		onResidualSubOrder: 9,
+	},
+	lockedmove: {
+		inherit: true,
+		onAfterMove: undefined, // no inherit
 	},
 	choicelock: {
 		inherit: true,

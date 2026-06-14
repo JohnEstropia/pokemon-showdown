@@ -2,31 +2,18 @@
 
 /**
  * The server port - the port to run Pokemon Showdown under
+ *
+ * @type {number}
  */
 exports.port = 8000;
 
 /**
  * The server address - the address at which Pokemon Showdown should be hosting
  *   This should be kept set to 0.0.0.0 unless you know what you're doing.
+ *
+ * @type {string}
  */
 exports.bindaddress = '0.0.0.0';
-
-/**
- * workers - the number of networking child processes to spawn
- *   This should be no greater than the number of threads available on your
- *   server's CPU. If you're not sure how many you have, you can check from a
- *   terminal by running:
- *
- *   $ node -e "console.log(require('os').cpus().length)"
- *
- *   Using more workers than there are available threads will cause performance
- *   issues. Keeping a couple threads available for use for OS-related work and
- *   other PS processes will likely give you the best performance, if your
- *   server's CPU is capable of multithreading. If you don't know what any of
- *   this means or you are unfamiliar with PS' networking code, leave this set
- *   to 1.
- */
-exports.workers = 1;
 
 /**
  * wsdeflate - compresses WebSocket messages
@@ -37,6 +24,15 @@ exports.workers = 1;
  * @type {AnyObject?}
  */
 exports.wsdeflate = null;
+
+/**
+ * lazysockets - disables eager initialization of network services
+ *  Turn this on if you'd prefer to manually connect Showdown to the network,
+ *  or you intend to run it offline.
+ *
+ * @type {boolean}
+ */
+exports.lazysockets = false;
 
 /*
 // example:
@@ -88,6 +84,50 @@ Main's SSL deploy script from Let's Encrypt looks like:
  */
 exports.proxyip = false;
 
+// subprocesses - the number of child processes to use for various tasks.
+//   Can be set to `0` instead of `{...}` to stop using subprocesses, if you're running out of RAM.
+exports.subprocesses = {
+	/**
+	 * network - the number of networking child processes to spawn
+	 *   This should be no greater than the number of threads available on your
+	 *   server's CPU. If you're not sure how many you have, you can check from a
+	 *   terminal by running:
+	 *
+	 *   $ node -e "console.log(require('os').cpus().length)"
+	 *
+	 *   Using more workers than there are available threads will cause performance
+	 *   issues. Keeping a couple threads available for use for OS-related work and
+	 *   other PS processes will likely give you the best performance, if your
+	 *   server's CPU is capable of multithreading. If you don't know what any of
+	 *   this means or you are unfamiliar with PS' networking code, leave this set
+	 *   to 1.
+	 */
+	network: 1,
+	/**
+	 * for simulating battles
+	 *   You should leave this at 1 unless your server has a very large
+	 *   amount of traffic (i.e. hundreds of concurrent battles).
+	 */
+	simulator: 1,
+
+	// beyond this point, it'd be very weird if you needed more than one of each of these
+
+	/** for validating teams */
+	validator: 1,
+	/** for user authentication */
+	verifier: 1,
+	localartemis: 1,
+	remoteartemis: 1,
+	friends: 1,
+	chatdb: 1,
+	modlog: 1,
+	pm: 1,
+	/** for the battlesearch chat plugin */
+	battlesearch: 1,
+	/** datasearch - for the datasearch chat plugin */
+	datasearch: 1,
+};
+
 /**
  * Various debug options
  *
@@ -129,6 +169,8 @@ exports.debugdexsearchprocesses = true;
  * Pokemon of the Day - put a pokemon's name here to make it Pokemon of the Day
  *   The PotD will always be in the #2 slot (not #1 so it won't be a lead)
  *   in every Random Battle team.
+ *
+ * @type {ID}
  */
 exports.potd = '';
 
@@ -239,6 +281,7 @@ exports.reportjoinsperiod = 0;
  * report battles - shows messages like "OU battle started" in the lobby
  *   This feature can lag larger servers - turn this off if your server is
  *   getting more than 160 or so users.
+ *  @type {boolean | string[] | string}
  */
 exports.reportbattles = true;
 
@@ -266,6 +309,20 @@ exports.nothrottle = false;
  * Removes all ip-based alt checking.
  */
 exports.noipchecks = false;
+
+/**
+ * controls the behavior of the /battlesearch command
+ *
+ * valid values are:
+ *   - true: disables battlesearch entirely
+ *   - false: enables the node.js /battlesearch
+ * 	   (uses either node fs or ripgrep for searching)
+ *   - 'psbattletools': defaults to the psbattletools /battlesearch (normally available as /alternatebattlesearch)
+ * 	   (uses psbattletools, which must be installed, for searching)
+ *
+ * @type {boolean | 'psbattletools'}
+ */
+exports.nobattlesearch = false;
 
 /**
  * allow punishmentmonitor to lock users with multiple roombans.
@@ -318,6 +375,8 @@ exports.laddermodchat = false;
  * forced timer - force the timer on for all battles
  *   Players will be unable to turn it off.
  *   This setting can also be turned on with the command /forcetimer.
+ *
+ * @type {boolean}
  */
 exports.forcetimer = false;
 
@@ -379,15 +438,6 @@ exports.logchallenges = false;
 exports.loguserstats = 1000 * 60 * 10; // 10 minutes
 
 /**
- * validatorprocesses - the number of processes to use for validating teams
- * simulatorprocesses - the number of processes to use for handling battles
- * You should leave both of these at 1 unless your server has a very large
- * amount of traffic (i.e. hundreds of concurrent battles).
- */
-exports.validatorprocesses = 1;
-exports.simulatorprocesses = 1;
-
-/**
  * inactiveuserthreshold - how long a user must be inactive before being pruned
  * from the `users` array. The default is 1 hour.
  */
@@ -397,6 +447,8 @@ exports.inactiveuserthreshold = 1000 * 60 * 60;
  * autolockdown - whether or not to automatically kill the server when it is
  * in lockdown mode and the final battle finishes.  This is potentially useful
  * to prevent forgetting to restart after a lockdown where battles are finished.
+ *
+ * @type {boolean}
  */
 exports.autolockdown = true;
 
@@ -409,21 +461,6 @@ exports.autolockdown = true;
  * no authority. You cannot log into a trusted (g+/r%) user account this way.
  */
 exports.noguestsecurity = false;
-
-/**
- * Custom avatars.
- * This allows you to specify custom avatar images for users on your server.
- * Place custom avatar files under the /config/avatars/ directory.
- * Users must be specified as userids -- that is, you must make the name all
- * lowercase and remove non-alphanumeric characters.
- *
- * Your server *must* be registered in order for your custom avatars to be
- * displayed in the client.
- * @type {{[userid: string]: string}}
- */
-exports.customavatars = {
-	// 'userid': 'customavatar.png'
-};
 
 /**
  * tourroom - specify a room to receive tournament announcements (defaults to
@@ -467,7 +504,7 @@ exports.disablehotpatchall = false;
  * Battles involving user IDs which begin with one of the prefixes configured here
  * will be unaffected by various battle privacy commands such as /modjoin, /hideroom
  * or /ionext.
- * @type {string[]}
+ * @type {string[] | undefined}
  */
 exports.forcedpublicprefixes = [];
 
@@ -490,7 +527,7 @@ exports.lastfmkey = '';
 exports.chatlogreader = 'fs';
 /**
  * permissions and groups:
- *   Each entry in `grouplist` is a seperate group. Some of the members are "special"
+ *   Each entry in `grouplist` is a separate group. Some of the members are "special"
  *     while the rest is just a normal permission.
  *   The order of the groups determines their ranking.
  *   The special members are as follows:
@@ -545,7 +582,7 @@ exports.chatlogreader = 'fs';
  */
 exports.grouplist = [
 	{
-		symbol: '&',
+		symbol: '~',
 		id: "admin",
 		name: "Administrator",
 		inherit: '@',
@@ -555,7 +592,7 @@ exports.grouplist = [
 		console: true,
 		bypassall: true,
 		lockdown: true,
-		promote: '&u',
+		promote: '~u',
 		roomowner: true,
 		roombot: true,
 		roommod: true,
@@ -641,7 +678,7 @@ exports.grouplist = [
 		timer: true,
 		modlog: true,
 		alts: '%u',
-		bypassblocks: 'u%@&~',
+		bypassblocks: 'u%@~',
 		receiveauthmessages: true,
 		gamemoderation: true,
 		jeopardy: true,
@@ -649,14 +686,6 @@ exports.grouplist = [
 		minigame: true,
 		modchat: true,
 		hiderank: true,
-	},
-	{
-		symbol: '\u25B8',
-		id: "sectionleader",
-		name: "Section Leader",
-		inherit: '+',
-
-		roomonly: true,
 	},
 	{
 		// Bots are ranked below Driver/Mod so that Global Bots can be kept out

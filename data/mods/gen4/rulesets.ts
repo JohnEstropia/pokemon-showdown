@@ -1,7 +1,20 @@
-export const Rulesets: {[k: string]: ModdedFormatData} = {
+export const Rulesets: import('../../../sim/dex-formats').ModdedFormatDataTable = {
+	standardag: {
+		inherit: true,
+		ruleset: [
+			'Obtainable', 'HP Percentage Mod', 'Cancel Mod', 'Beat Up Nicknames Mod', 'Endless Battle Clause',
+		],
+	},
 	standard: {
 		inherit: true,
-		ruleset: ['Obtainable', 'Sleep Clause Mod', 'Species Clause', 'Nickname Clause', 'OHKO Clause', 'Evasion Moves Clause', 'Endless Battle Clause', 'HP Percentage Mod', 'Cancel Mod'],
+		ruleset: [
+			'Standard AG',
+			'Sleep Clause Mod', 'Species Clause', 'Nickname Clause', 'OHKO Clause', 'Evasion Items Clause', 'Evasion Moves Clause',
+		],
+	},
+	flatrules: {
+		inherit: true,
+		ruleset: ['Obtainable', 'Species Clause', 'Nickname Clause', 'Item Clause = 1', 'Adjust Level Down = 50', 'Picked Team Size = Auto', 'Cancel Mod'],
 	},
 	teampreview: {
 		inherit: true,
@@ -9,32 +22,12 @@ export const Rulesets: {[k: string]: ModdedFormatData} = {
 			this.add('clearpoke');
 			for (const pokemon of this.getAllPokemon()) {
 				const details = pokemon.details.replace(', shiny', '')
-					.replace(/(Arceus|Gourgeist|Genesect|Pumpkaboo|Silvally|Zacian|Zamazenta|Urshifu)(-[a-zA-Z?-]+)?/g, '$1-*');
+					.replace(/(Arceus|Genesect|Gourgeist|Pumpkaboo|Xerneas|Silvally|Urshifu|Dudunsparce)(-[a-zA-Z?-]+)?/g, '$1-*')
+					.replace(/(Zacian|Zamazenta)(?!-Crowned)/g, '$1-*') // Hacked-in Crowned formes will be revealed
+					.replace(/(Greninja)(?!-Ash)/g, '$1-*'); // Hacked-in Greninja-Ash will be revealed
 				this.add('poke', pokemon.side.id, details, pokemon.item ? 'item' : '');
 			}
 			this.makeRequest('teampreview');
-		},
-	},
-	validatestats: {
-		inherit: true,
-		onValidateSet(set) {
-			const species = this.dex.species.get(set.species);
-			const item = this.dex.items.get(set.item);
-			if (item && item.id === 'griseousorb' && species.num !== 487) {
-				return ['Griseous Orb can only be held by Giratina in Generation 4.'];
-			}
-			if (species.num === 493 && set.evs) {
-				const isEventArceus = set.moves.includes('roaroftime') || set.moves.includes('shadowforce') ||
-					set.moves.includes('spacialrend');
-				if (isEventArceus) {
-					let stat: StatID;
-					for (stat in set.evs) {
-						if (set.evs[stat] > 100) {
-							return ["Event Arceus may not have more than 100 of any EVs in Generation 4."];
-						}
-					}
-				}
-			}
 		},
 	},
 };

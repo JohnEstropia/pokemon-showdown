@@ -2,7 +2,7 @@
  * The japanese version of Blizzard in Gen 1 had a 30% chance to freeze
  */
 
-export const Moves: {[k: string]: ModdedMoveData} = {
+export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 	blizzard: {
 		inherit: true,
 		secondary: {
@@ -10,55 +10,10 @@ export const Moves: {[k: string]: ModdedMoveData} = {
 			status: 'frz',
 		},
 	},
-	dig: {
-		inherit: true,
-		condition: {
-			duration: 2,
-			onLockMove: 'dig',
-			onInvulnerability(target, source, move) {
-				if (move.id === 'swift' && target.volatiles['substitute']) return true;
-				this.add('-message', `The foe ${target.name} can't be hit underground!`);
-				return false;
-			},
-			onDamage(damage, target, source, move) {
-				if (!move || move.effectType !== 'Move') return;
-				if (!source) return;
-				if (move.id === 'earthquake') {
-					this.add('-message', `The foe ${target.name} can't be hit underground!`);
-					return null;
-				}
-			},
-		},
-	},
-	fly: {
-		inherit: true,
-		condition: {
-			duration: 2,
-			onLockMove: 'fly',
-			onInvulnerability(target, source, move) {
-				if (move.id === 'swift' && target.volatiles['substitute']) return true;
-				this.add('-message', `The foe ${target.name} can't be hit while flying!`);
-				return false;
-			},
-			onDamage(damage, target, source, move) {
-				if (!move || move.effectType !== 'Move') return;
-				if (!source || source.side === target.side) return;
-				if (move.id === 'gust' || move.id === 'thunder') {
-					this.add('-message', `The foe ${target.name} can't be hit while flying!`);
-					return null;
-				}
-			},
-		},
-	},
 	substitute: {
 		inherit: true,
 		condition: {
-			onStart(target) {
-				this.add('-start', target, 'Substitute');
-				this.effectState.hp = Math.floor(target.maxhp / 4) + 1;
-				delete target.volatiles['partiallytrapped'];
-			},
-			onTryHitPriority: -1,
+			inherit: true,
 			onTryHit(target, source, move) {
 				if (move.drain) {
 					this.add('-miss', source);
@@ -79,11 +34,9 @@ export const Moves: {[k: string]: ModdedMoveData} = {
 				// NOTE: In future generations the damage is capped to the remaining HP of the
 				// Substitute, here we deliberately use the uncapped damage when tracking lastDamage etc.
 				// Also, multi-hit moves must always deal the same damage as the first hit for any subsequent hits
-				let uncappedDamage = move.hit > 1 ? source.lastDamage : this.actions.getDamage(source, target, move);
-				if (!uncappedDamage) return null;
-				uncappedDamage = this.runEvent('SubDamage', target, source, move, uncappedDamage);
-				if (!uncappedDamage) return uncappedDamage;
-				source.lastDamage = uncappedDamage;
+				const uncappedDamage = move.hit > 1 ? this.lastDamage : this.actions.getDamage(source, target, move);
+				if (!uncappedDamage && uncappedDamage !== 0) return null;
+				this.lastDamage = uncappedDamage;
 				target.volatiles['substitute'].hp -= uncappedDamage > target.volatiles['substitute'].hp ?
 					target.volatiles['substitute'].hp : uncappedDamage;
 				if (target.volatiles['substitute'].hp <= 0) {
@@ -105,7 +58,7 @@ export const Moves: {[k: string]: ModdedMoveData} = {
 				// Add here counter damage
 				const lastAttackedBy = target.getLastAttackedBy();
 				if (!lastAttackedBy) {
-					target.attackedBy.push({source: source, move: move.id, damage: uncappedDamage, thisTurn: true, slot: source.getSlot()});
+					target.attackedBy.push({ source, move: move.id, damage: uncappedDamage, thisTurn: true, slot: source.getSlot() });
 				} else {
 					lastAttackedBy.move = move.id;
 					lastAttackedBy.damage = uncappedDamage;
@@ -117,9 +70,6 @@ export const Moves: {[k: string]: ModdedMoveData} = {
 					return true;
 				}
 				return accuracy;
-			},
-			onEnd(target) {
-				this.add('-end', target, 'Substitute');
 			},
 		},
 	},

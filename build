@@ -2,10 +2,12 @@
 "use strict";
 
 try {
-	// technically this was introduced in Node 11, but we'll ask for the most recent LTS with it to be safe
-	[].flatMap(x => x);
+	// fetch was introduced in Node 18, which is EOL,
+	// so we'll ask for the most recent "Active LTS" with it to be safe
+	// https://nodejs.org/en/about/previous-releases
+	fetch;
 } catch (e) {
-	console.log("We require Node.js version 12 or later; you're using " + process.version);
+	console.error("We require Node.js version 22 or later; you're using " + process.version);
 	process.exit(1);
 }
 
@@ -22,23 +24,11 @@ function shell(cmd) {
 
 // Check to make sure the most recently added or updated dependency is installed at the correct version
 try {
-	var sucraseVersion = require('sucrase').getVersion().split('.');
-	if (
-		parseInt(sucraseVersion[0]) < 3 ||
-		(parseInt(sucraseVersion[0]) === 3 && parseInt(sucraseVersion[1]) < 15)
-	) {
-		throw new Error("Sucrase version too old");
-	}
+	require.resolve('ts-chacha20');
 } catch (e) {
 	console.log('Installing dependencies...');
-	shell('npm install' + (decl ? '' : ' --production'));
-	force = true;
+	shell('npm ci');
 }
-// for some reason, sucrase won't be requirable until a tick has passed
-// see https://stackoverflow.com/questions/53270058/node-cant-find-certain-modules-after-synchronous-install
-setImmediate(() => {
-	require('./tools/build-utils').transpile(force, decl);
-});
 
 // Make sure config.js exists. If not, copy it over synchronously from
 // config-example.js, since it's needed before we can start the server
@@ -53,3 +43,9 @@ try {
 		fs.readFileSync('config/config-example.js')
 	);
 }
+
+// for some reason, esbuild won't be requirable until a tick has passed
+// see https://stackoverflow.com/questions/53270058/node-cant-find-certain-modules-after-synchronous-install
+setImmediate(() => {
+	require('./tools/build-utils').transpile(force, decl);
+});

@@ -4,8 +4,8 @@
  * @author Annika, Zarel
  */
 
-import {roomFaqs, getAlias, visualizeFaq} from './room-faqs';
-import type {MessageHandler} from '../rooms';
+import { roomFaqs, getAlias, visualizeFaq } from './room-faqs';
+import type { MessageHandler } from '../rooms';
 
 export interface RepeatedPhrase {
 	/** Identifier for deleting */
@@ -82,7 +82,7 @@ export const Repeats = new class {
 			roomRepeats = new Map();
 			this.repeats.set(room, roomRepeats);
 		}
-		const {id, phrase, interval} = repeat;
+		const { id, phrase, interval } = repeat;
 
 		if (roomRepeats.has(id)) {
 			throw new Error(`Repeat already exists`);
@@ -96,7 +96,7 @@ export const Repeats = new class {
 			const repeatedPhrase = repeat.faq ?
 				visualizeFaq(roomFaqs[targetRoom.roomid][repeat.id]) : Chat.formatText(phrase, true);
 			const formattedText = repeat.isHTML ? phrase : repeatedPhrase;
-			targetRoom.add(`|html|<div class="infobox">${formattedText}</div>`);
+			targetRoom.add(`|uhtml|repeat-${repeat.id}|<div class="infobox">${formattedText}</div>`);
 			targetRoom.update();
 		};
 
@@ -138,7 +138,8 @@ export const pages: Chat.PageTable = {
 		for (const repeat of room.settings.repeats) {
 			const minutes = repeat.interval / (repeat.isByMessages ? 1 : 60 * 1000);
 			const repeatText = repeat.faq ? roomFaqs[room.roomid][repeat.id].source : repeat.phrase;
-			const phrase = repeat.isHTML ? repeat.phrase : Chat.formatText(repeatText, true);
+			const phrase = repeat.faq ? visualizeFaq(roomFaqs[room.roomid][repeat.id]) :
+				repeat.isHTML ? repeat.phrase : Chat.formatText(repeatText, true);
 			html += `<tr><td>${repeat.id}</td><td>${phrase}</td><td>${Chat.getReadmoreCodeBlock(repeatText)}</td><td>${repeat.isByMessages ? this.tr`every ${minutes} chat message(s)` : this.tr`every ${minutes} minute(s)`}</td>`;
 			html += `<td><button class="button" name="send" value="/msgroom ${room.roomid},/removerepeat ${repeat.id}">${this.tr`Remove`}</button></td>`;
 		}
@@ -159,6 +160,7 @@ export const commands: Chat.ChatCommands = {
 		const isHTML = cmd.includes('html');
 		const isByMessages = cmd.includes('bymessages');
 		room = this.requireRoom();
+		if (room.settings.isPersonal) throw new Chat.ErrorMessage(`Personal rooms do not support repeated messages.`);
 		this.checkCan(isHTML ? 'addhtml' : 'mute', null, room);
 		const [intervalString, name, ...messageArray] = target.split(',');
 		const id = toID(name);
@@ -195,11 +197,11 @@ export const commands: Chat.ChatCommands = {
 	repeathelp() {
 		this.runBroadcast();
 		this.sendReplyBox(
-			`<code>/repeat [minutes], [id], [phrase]</code>: repeats a given phrase every [minutes] minutes. Requires: % @ # &<br />` +
-			`<code>/repeathtml [minutes], [id], [phrase]</code>: repeats a given phrase containing HTML every [minutes] minutes. Requires: # &<br />` +
-			`<code>/repeatfaq [minutes], [FAQ name/alias]</code>: repeats a given Room FAQ every [minutes] minutes. Requires: % @ # &<br />` +
-			`<code>/removerepeat [id]</code>: removes a repeated phrase. Requires: % @ # &<br />` +
-			`<code>/viewrepeats [optional room]</code>: Displays all repeated phrases in a room. Requires: % @ # &<br />` +
+			`<code>/repeat [minutes], [id], [phrase]</code>: repeats a given phrase every [minutes] minutes. Requires: % @ # ~<br />` +
+			`<code>/repeathtml [minutes], [id], [phrase]</code>: repeats a given phrase containing HTML every [minutes] minutes. Requires: # ~<br />` +
+			`<code>/repeatfaq [minutes], [FAQ name/alias]</code>: repeats a given Room FAQ every [minutes] minutes. Requires: % @ # ~<br />` +
+			`<code>/removerepeat [id]</code>: removes a repeated phrase. Requires: % @ # ~<br />` +
+			`<code>/viewrepeats [optional room]</code>: Displays all repeated phrases in a room. Requires: % @ # ~<br />` +
 			`You can append <code>bymessages</code> to a <code>/repeat</code> command to repeat a phrase based on how many messages have been sent in chat. For example, <code>/repeatfaqbymessages ...</code><br />` +
 			`Phrases for <code>/repeat</code> can include normal chat formatting, but not commands.`
 		);
@@ -209,6 +211,7 @@ export const commands: Chat.ChatCommands = {
 	repeatfaq(target, room, user, connection, cmd) {
 		room = this.requireRoom();
 		this.checkCan('mute', null, room);
+		if (room.settings.isPersonal) throw new Chat.ErrorMessage(`Personal rooms do not support repeated messages.`);
 		const isByMessages = cmd.includes('bymessages');
 
 		let [intervalString, topic] = target.split(',');
@@ -254,11 +257,11 @@ export const commands: Chat.ChatCommands = {
 		}
 		this.checkCan('mute', null, room);
 		if (!room.settings.repeats?.length) {
-			return this.errorReply(this.tr`There are no repeated phrases in this room.`);
+			throw new Chat.ErrorMessage(this.tr`There are no repeated phrases in this room.`);
 		}
 
 		if (!Repeats.hasRepeat(room, id)) {
-			return this.errorReply(this.tr`The phrase labeled with "${id}" is not being repeated in this room.`);
+			throw new Chat.ErrorMessage(this.tr`The phrase labeled with "${id}" is not being repeated in this room.`);
 		}
 
 		Repeats.removeRepeat(room, id);
@@ -272,10 +275,10 @@ export const commands: Chat.ChatCommands = {
 		room = this.requireRoom();
 		this.checkCan('declare', null, room);
 		if (!room.settings.repeats?.length) {
-			return this.errorReply(this.tr`There are no repeated phrases in this room.`);
+			throw new Chat.ErrorMessage(this.tr`There are no repeated phrases in this room.`);
 		}
 
-		for (const {id} of room.settings.repeats) {
+		for (const { id } of room.settings.repeats) {
 			Repeats.removeRepeat(room, id);
 		}
 
@@ -286,11 +289,11 @@ export const commands: Chat.ChatCommands = {
 	repeats: 'viewrepeats',
 	viewrepeats(target, room, user) {
 		const roomid = toID(target) || room?.roomid;
-		if (!roomid) return this.errorReply(this.tr`You must specify a room when using this command in PMs.`);
+		if (!roomid) throw new Chat.ErrorMessage(this.tr`You must specify a room when using this command in PMs.`);
 		this.parse(`/j view-repeats-${roomid}`);
 	},
 };
 
-process.nextTick(() => {
-	Chat.multiLinePattern.register('/repeat ');
-});
+export function start() {
+	Chat.multiLinePattern.register('/repeat(html|faq)?(bymessages)? ');
+}

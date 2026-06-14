@@ -3,7 +3,7 @@
 const path = require('path');
 const fs = require('fs');
 const assert = require('./assert');
-const Sim = require('./../sim');
+const Sim = require('./../dist/sim');
 const Dex = Sim.Dex;
 
 const cache = new Map();
@@ -16,14 +16,14 @@ function capitalize(word) {
 /**
  * The default random number generator seed used if one is not given.
  */
-const DEFAULT_SEED = [0x09917, 0x06924, 0x0e1c8, 0x06af0];
+const DEFAULT_SEED = 'gen5,99176924e1c86af0';
 
 class TestTools {
 	constructor(mod = 'base') {
 		this.currentMod = mod;
 		this.dex = Dex.mod(mod);
 
-		this.modPrefix = this.dex.isBase ? `[gen8] ` : `[${mod}] `;
+		this.modPrefix = this.dex.isBase ? `[gen9] ` : `[${mod}] `;
 	}
 
 	mod(mod) {
@@ -42,32 +42,43 @@ class TestTools {
 	}
 
 	getFormat(options) {
-		if (options.formatid) return Dex.formats.get(options.formatid);
+		if (options.formatid) {
+			const format = Dex.formats.get(options.formatid, true);
+			if (format.effectType !== 'Format') throw new Error(`Unidentified format: ${options.formatid}`);
+			return format;
+		}
 
 		const gameType = Dex.toID(options.gameType || 'singles');
+		let basicFormat = this.currentMod === 'base' && gameType === 'singles' ? 'Anything Goes' : 'Custom Game';
+		if (options.pokemon) throw new Error(`The 'pokemon' option is no longer supported`);
 		const customRules = [
-			options.pokemon && '-Nonexistent',
-			options.legality && 'Obtainable',
-			!options.preview && '!Team Preview',
+			options.legality ? '^Obtainable' : '^!Obtainable',
+			options.preview ? '^Team Preview' : '^!Team Preview',
 			options.sleepClause && 'Sleep Clause Mod',
 			!options.cancel && '!Cancel Mod',
-			options.endlessBattleClause && 'Endless Battle Clause',
+			options.endlessBattleClause ? '^Endless Battle Clause' : '^!Endless Battle Clause',
 			options.inverseMod && 'Inverse Mod',
 			options.overflowStatMod && 'Overflow Stat Mod',
+			options.customRules,
 		].filter(Boolean);
 		const customRulesID = customRules.length ? `@@@${customRules.join(',')}` : ``;
 
-		let basicFormat = this.currentMod === 'base' && gameType === 'singles' ? 'Anything Goes' : 'Custom Game';
+		let modPrefix = this.modPrefix;
 		if (this.currentMod === 'gen1stadium') basicFormat = 'OU';
-		if (gameType === 'freeforall') basicFormat = 'randombattle';
+		if (gameType === 'multi') {
+			basicFormat = 'randombattle';
+			modPrefix = `[gen8] `; // Remove when multis support Gen 9
+		}
+		// Re-integrate to the above if statement when gen 9 ffa randbats is added
+		if (gameType === 'freeforall') basicFormat = '';
 		const gameTypePrefix = gameType === 'singles' ? '' : capitalize(gameType) + ' ';
-		const formatName = `${this.modPrefix}${gameTypePrefix}${basicFormat}${customRulesID}`;
+		const formatName = `${modPrefix}${gameTypePrefix}${basicFormat}${customRulesID}`;
 
 		let format = formatsCache.get(formatName);
 		if (format) return format;
 
-		format = Dex.formats.get(formatName);
-		if (!format.exists) throw new Error(`Unidentified format: ${formatName}`);
+		format = Dex.formats.get(formatName, true);
+		if (format.effectType !== 'Format') throw new Error(`Unidentified format: ${formatName}`);
 
 		formatsCache.set(formatName, format);
 		return format;
@@ -89,11 +100,13 @@ class TestTools {
 		const format = this.getFormat(options);
 
 		const battleOptions = {
-			format: format,
+			debug: true,
+			forceRandomChance: options.forceRandomChance,
+			format,
 			// If a seed for the pseudo-random number generator is not provided,
 			// a default seed (guaranteed to be the same across test executions)
 			// will be used.
-			seed: options.seed || DEFAULT_SEED,
+			seed: options.seed === undefined ? DEFAULT_SEED : (options.seed || undefined),
 			strictChoices: options.strictChoices !== false,
 		};
 
@@ -102,7 +115,7 @@ class TestTools {
 		for (let i = 0; i < teams.length; i++) {
 			assert(Array.isArray(teams[i]), `Team provided is not an array`);
 			const playerSlot = `p${i + 1}`;
-			battleOptions[playerSlot] = {team: teams[i]};
+			battleOptions[playerSlot] = { team: teams[i] };
 		}
 
 		return new Sim.Battle(battleOptions);
@@ -120,7 +133,7 @@ class TestTools {
 		const battleLog = battle.getDebugLog();
 		if (!fileName) fileName = 'test-replay';
 		const filePath = path.resolve(__dirname, `./replays/${fileName}-${Date.now()}.html`);
-		const out = fs.createWriteStream(filePath, {flags: 'a'});
+		const out = fs.createWriteStream(filePath, { flags: 'a' });
 		out.on('open', () => {
 			out.write(
 				`<!DOCTYPE html>\n` +
@@ -130,8 +143,16 @@ class TestTools {
 			out.end();
 		});
 	}
+	hasModule(mod) {
+		try {
+			require(mod);
+			return true;
+		} catch {
+			return false;
+		}
+	}
 }
 
 const common = exports = module.exports = new TestTools();
 cache.set('base', common);
-cache.set('gen8', common);
+cache.set('gen9', common);

@@ -5,11 +5,10 @@
  * @license MIT
  */
 
-import {PRNG, PRNGSeed} from '../prng';
-import {Runner, RunnerOptions} from './runner';
+import { PRNG, type PRNGSeed } from '../prng';
+import { Runner, type RunnerOptions } from './runner';
 
-// @ts-ignore
-export interface MultiRandomRunnerOptions extends RunnerOptions {
+export interface MultiRandomRunnerOptions extends Partial<RunnerOptions> {
 	totalGames: number;
 	prng?: PRNG | PRNGSeed | null;
 	format?: string;
@@ -21,7 +20,7 @@ export interface MultiRandomRunnerOptions extends RunnerOptions {
 export class MultiRandomRunner {
 	static readonly FORMATS = [
 		'gen8randombattle', 'gen8randomdoublesbattle', 'gen8battlefactory',
-		'gen7randombattle', 'gen7randomdoublesbattle', 'gen7battlefactory',
+		'gen7randombattle', 'gen7battlefactory',
 		'gen6randombattle', 'gen6battlefactory',
 		'gen5randombattle',
 		'gen4randombattle',
@@ -36,25 +35,24 @@ export class MultiRandomRunner {
 	private readonly format: string | undefined;
 	private readonly cycle: boolean;
 	private readonly all: boolean;
-	private readonly async: boolean;
+	private readonly isAsync: boolean;
 
 	private formatIndex: number;
 	private numGames: number;
 
 	constructor(options: MultiRandomRunnerOptions) {
-		this.options = {...options};
+		this.options = { ...options };
 
 		this.totalGames = options.totalGames;
 
-		this.prng = (options.prng && !Array.isArray(options.prng)) ?
-			options.prng : new PRNG(options.prng);
+		this.prng = PRNG.get(options.prng);
 		this.options.prng = this.prng;
 
 		this.format = options.format;
 		this.cycle = !!options.cycle;
 		this.all = !!options.all;
 
-		this.async = !!options.async;
+		this.isAsync = !!options.async;
 
 		this.formatIndex = 0;
 		this.numGames = 0;
@@ -67,26 +65,26 @@ export class MultiRandomRunner {
 		let failures = 0;
 		while ((format = this.getNextFormat())) {
 			if (this.all && lastFormat && format !== lastFormat) {
-				if (this.async) await Promise.all(games);
+				if (this.isAsync) await Promise.all(games);
 				games = [];
 			}
 
-			const seed = this.prng.seed;
-			const game = new Runner({format, ...this.options}).run().catch(err => {
+			const seed = this.prng.getSeed();
+			const game = new Runner({ format, ...this.options }).run().catch(err => {
 				failures++;
 				console.error(
-					`Run \`node tools/simulate multi 1 --format=${format} --seed=${seed.join()}\` ` +
+					`Run \`node tools/simulate multi 1 --format=${format} --seed=${seed}\` ` +
 					`to debug (optionally with \`--output\` and/or \`--input\` for more info):\n`,
 					err
 				);
 			});
 
-			if (!this.async) await game;
+			if (!this.isAsync) await game;
 			games.push(game);
 			lastFormat = format;
 		}
 
-		if (this.async) await Promise.all(games);
+		if (this.isAsync) await Promise.all(games);
 		return failures;
 	}
 

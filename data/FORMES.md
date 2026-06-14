@@ -113,7 +113,7 @@ Some Pokémon change forme in the middle of a battle. These forme changes do res
 
 List of all in-battle forme changes:
 
-- Ash Greninja (Battle Bond)
+- Ash-Greninja (Battle Bond)
 - Mimikyu (Disguise)
 - Cherrim (Flower Gift)
 - Castform (Forecast)
@@ -127,6 +127,7 @@ List of all in-battle forme changes:
 - Darmanitan (Zen Mode)
 - Meloetta (Relic Song)
 - Shaymin-Sky (Frozen status)
+- Ramnarok (Polar Flare)
 - Mega evolutions
 - Primal reversions
 - Ultra Burst

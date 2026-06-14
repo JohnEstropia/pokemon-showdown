@@ -19,11 +19,10 @@
 
 'use strict';
 
-require('ts-node').register();
 const child_process = require('child_process');
 const path = require('path');
 const fs = require('fs');
-const shell = cmd => child_process.execSync(cmd, {stdio: 'inherit', cwd: path.resolve(__dirname, '../..')});
+const shell = cmd => child_process.execSync(cmd, { stdio: 'inherit', cwd: path.resolve(__dirname, '../..') });
 shell('node build');
 
 function missing(dep) {
@@ -53,7 +52,7 @@ Chat.plural = function (num, plural = 's', singular = '') {
 	return (num !== 1 ? plural : singular);
 };
 
-const importer = require('./importer.js');
+const importer = require('../../dist/tools/set-import/importer.js');
 
 const SETS = path.resolve(__dirname, 'sets');
 (async () => {
@@ -85,7 +84,7 @@ const SETS = path.resolve(__dirname, 'sets');
 			} else {
 				version = `${major}.${minor}.${Number(patch) + 1}`;
 			}
-		} catch (err) {
+		} catch {
 			console.error("Version required to create '@smogon/sets' package");
 			process.exit(1);
 		}
@@ -93,11 +92,11 @@ const SETS = path.resolve(__dirname, 'sets');
 
 	const packagejson = {
 		"name": "@smogon/sets",
-		"version": version,
+		version,
 		"description": "Set data imported from Smogon.com and used on Pokémon Showdown",
-		"main": "build/index.js",
-		"unpkg": "build/index.js",
-		"types": "build/index.d.ts",
+		"main": "index.js",
+		"unpkg": "index.js",
+		"types": "index.d.ts",
 		"repository": "github:smogon/sets",
 		"publishConfig": {
 			"access": "public",
@@ -135,4 +134,3 @@ const SETS = path.resolve(__dirname, 'sets');
 	].join('\n');
 	fs.writeFileSync(path.resolve(SETS, 'index.js'), indexjs);
 })().catch(err => console.error(err));
-

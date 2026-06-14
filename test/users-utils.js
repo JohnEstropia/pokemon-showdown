@@ -1,14 +1,14 @@
 'use strict';
 
 /** @type {typeof import('../lib/streams').ObjectReadWriteStream} */
-const ObjectReadWriteStream = require('../lib/streams').ObjectReadWriteStream;
+const ObjectReadWriteStream = require('../dist/lib/streams').ObjectReadWriteStream;
 
 /** @extends {ObjectReadWriteStream<string>} */
 class WorkerStream extends ObjectReadWriteStream {
 	constructor(id) {
 		super();
 		this.id = id;
-		this.process = {connected: true};
+		this.process = { connected: true };
 		this.sockets = new Set();
 		this.rooms = new Map();
 		this.roomChannels = new Map();
@@ -169,5 +169,13 @@ function makeUser(name, connectionOrIp) {
 	return user;
 }
 
+function destroyUser(user) {
+	if (!user || !user.connected) return false;
+	user.resetName();
+	user.disconnectAll();
+	user.destroy();
+}
+
 exports.makeConnection = makeConnection;
 exports.makeUser = makeUser;
+exports.destroyUser = destroyUser;
