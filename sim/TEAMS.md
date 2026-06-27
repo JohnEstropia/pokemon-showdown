@@ -78,6 +78,58 @@ Adamant Nature
 
 It's used for teambuilder import/export features, and not much else. But as a user, this is the only format you'll see.
 
+The beta client (`https://psim.us/beta`) uses a modified version of this format. It looks like this:
+
+```
+Articuno
+[Pressure] @ Leftovers
+- Ice Beam
+- Hurricane
+- Substitute
+- Roost
+EVs: 252 HP / - Atk / 252+ SpA / 4 SpD (Modest)
+IVs: 30 SpA / 30 SpD
+
+Ludicolo
+[Swift Swim] @ Life Orb
+- Surf
+- Giga Drain
+- Ice Beam
+- Rain Dance
+EVs: 4 HP / - Atk / 252+ SpA / 252 Spe (Modest)
+
+Volbeat (M)
+[Prankster] @ Damp Rock
+- Tail Glow
+- Baton Pass
+- Encore
+- Rain Dance
+EVs: 248 HP / - Atk / 252+ Def / 8 SpD (Bold)
+
+Seismitoad
+[Swift Swim] @ Life Orb
+- Hydro Pump
+- Earth Power
+- Stealth Rock
+- Rain Dance
+EVs: - Atk / 252+ SpA / 4 SpD / 252 Spe (Modest)
+
+Alomomola
+[Regenerator] @ Damp Rock
+- Wish
+- Protect
+- Toxic
+- Rain Dance
+EVs: 252 HP / - Atk / 252+ Def / 4 SpD (Bold)
+
+Armaldo
+[Swift Swim] @ Leftovers
+- X-Scissor
+- Stone Edge
+- Aqua Tail
+- Rapid Spin
+EVs: 128 HP / 252+ Atk / 4 Def / - SpA / 124 Spe (Adamant)
+```
 
 JSON format
 -----------
@@ -170,7 +222,7 @@ Armaldo||leftovers|swiftswim|xscissor,stoneedge,aquatail,rapidspin|Adamant|128,2
 The format is a list of pokemon delimited by `]`, where every Pokémon is:
 
 ```
-NICKNAME|SPECIES|ITEM|ABILITY|MOVES|NATURE|EVS|GENDER|IVS|SHINY|LEVEL|HAPPINESS,POKEBALL,HIDDENPOWERTYPE
+NICKNAME|SPECIES|ITEM|ABILITY|MOVES|NATURE|EVS|GENDER|IVS|SHINY|LEVEL|HAPPINESS,POKEBALL,HIDDENPOWERTYPE,GIGANTAMAX,DYNAMAXLEVEL,TERATYPE
 ```
 
 - `SPECIES` is left blank if it's identical to `NICKNAME`
@@ -186,7 +238,7 @@ NICKNAME|SPECIES|ITEM|ABILITY|MOVES|NATURE|EVS|GENDER|IVS|SHINY|LEVEL|HAPPINESS,
   HP, Atk, Def, SpA, SpD, Spe. EVs left blank are 0, IVs left blank are 31.
   If all EVs or IVs are blank, the commas can all be left off.
 
-- `EVS` represent AVs in Pokémon Let's Go.
+- `EVS` represent AVs in Pokémon Let's Go and Stat Points in Pokémon Champions.
 
 - `IVS` represent DVs in Gen 1-2. The IV will be divided by 2 and rounded down,
   to become DVs (so the default of 31 IVs is converted to 15 DVs).
@@ -206,8 +258,14 @@ NICKNAME|SPECIES|ITEM|ABILITY|MOVES|NATURE|EVS|GENDER|IVS|SHINY|LEVEL|HAPPINESS,
   Hyper Training doesn't affect IVs, or if it's represented by a move in
   the moves list.
 
-- If `POKEBALL` and `HIDDENPOWERTYPE` are both blank, the commas will be left
-  off.
+- `GIGANTAMAX` is `G` for Gmax, blank for non-Gmax.
+
+- `DYNAMAXLEVEL` is left blank for 10.
+
+- `TERATYPE` if left blank will default to the Pokémon's first type.
+
+- If `POKEBALL`, `HIDDENPOWERTYPE`, `GIGANTAMAX`, `DYNAMAXLEVEL` and `TERATYPE`
+  are all blank, the commas will be left off.
 
 
 Converting between formats

@@ -1,4 +1,4 @@
-export const Conditions: {[k: string]: ModdedConditionData} = {
+export const Conditions: import('../../../sim/dex-conditions').ModdedConditionDataTable = {
 	brn: {
 		name: 'brn',
 		effectType: 'Status',
@@ -18,7 +18,7 @@ export const Conditions: {[k: string]: ModdedConditionData} = {
 		inherit: true,
 		onBeforeMovePriority: 2,
 		onBeforeMove(pokemon) {
-			if (this.randomChance(1, 4)) {
+			if (this.randomChance(63, 256)) {
 				this.add('cant', pokemon, 'par');
 				return false;
 			}
@@ -29,12 +29,16 @@ export const Conditions: {[k: string]: ModdedConditionData} = {
 		effectType: 'Status',
 		onStart(target, source, sourceEffect) {
 			if (sourceEffect && sourceEffect.effectType === 'Move') {
-				this.add('-status', target, 'slp', '[from] move: ' + sourceEffect.name);
+				this.add('-status', target, 'slp', `[from] move: ${sourceEffect.name}`);
 			} else {
 				this.add('-status', target, 'slp');
 			}
 			// 1-6 turns
 			this.effectState.time = this.random(2, 8);
+
+			if (target.removeVolatile('nightmare')) {
+				this.add('-end', target, 'Nightmare', '[silent]');
+			}
 		},
 		onBeforeMovePriority: 10,
 		onBeforeMove(pokemon, target, move) {
@@ -58,8 +62,8 @@ export const Conditions: {[k: string]: ModdedConditionData} = {
 			this.add('cant', pokemon, 'frz');
 			return false;
 		},
-		onModifyMove() {},
-		onHit() {},
+		onModifyMove: undefined, // no inherit
+		onDamagingHit: undefined, // no inherit
 		onAfterMoveSecondary(target, source, move) {
 			if ((move.secondary && move.secondary.status === 'brn') || move.statusRoll === 'brn') {
 				target.cureStatus();
@@ -173,12 +177,17 @@ export const Conditions: {[k: string]: ModdedConditionData} = {
 		onStart(target, source, effect) {
 			this.effectState.move = effect.id;
 		},
+		onAfterMove(pokemon) {
+			if (this.effectState.duration === 1) {
+				pokemon.removeVolatile('lockedmove');
+			}
+		},
 		onEnd(target) {
 			// Confusion begins even if already confused
 			delete target.volatiles['confusion'];
 			if (!target.side.getSideCondition('safeguard')) target.addVolatile('confusion');
 		},
-		onLockMove(pokemon) {
+		onLockMove() {
 			return this.effectState.move;
 		},
 		onMoveAborted(pokemon) {
@@ -188,7 +197,7 @@ export const Conditions: {[k: string]: ModdedConditionData} = {
 			const move = this.dex.moves.get(this.effectState.move);
 			if (move.id) {
 				this.debug('Forcing into ' + move.id);
-				this.queue.changeAction(pokemon, {choice: 'move', moveid: move.id});
+				this.queue.changeAction(pokemon, { choice: 'move', moveid: move.id });
 			}
 		},
 	},
@@ -219,7 +228,7 @@ export const Conditions: {[k: string]: ModdedConditionData} = {
 		},
 		onStallMove() {
 			const counter = Math.floor(this.effectState.counter) || 127;
-			this.debug("Success chance: " + Math.round(counter * 1000 / 255) / 10 + "% (" + counter + "/255)");
+			this.debug(`Success chance: ${Math.round(counter * 1000 / 255) / 10}% (${counter}/255)`);
 			return this.randomChance(counter, 255);
 		},
 		onRestart() {

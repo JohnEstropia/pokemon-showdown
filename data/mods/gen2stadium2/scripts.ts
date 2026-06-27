@@ -7,7 +7,7 @@ export const Scripts: ModdedBattleScriptsData = {
 	pokemon: {
 		inherit: true,
 		getStat(statName, unboosted, unmodified, fastReturn) {
-			// @ts-ignore - type checking prevents 'hp' from being passed, but we're paranoid
+			// @ts-expect-error type checking prevents 'hp' from being passed, but we're paranoid
 			if (statName === 'hp') throw new Error("Please read `maxhp` directly");
 
 			// base stat
@@ -56,7 +56,7 @@ export const Scripts: ModdedBattleScriptsData = {
 			) {
 				stat *= 2;
 			} else if (this.species.name === 'Ditto' && this.item === 'metalpowder' && ['def', 'spd'].includes(statName)) {
-				stat *= 1.5;
+				stat = Math.floor(stat * 1.5);
 			}
 
 			return stat;
@@ -95,9 +95,25 @@ export const Scripts: ModdedBattleScriptsData = {
 				return false;
 			}
 
+			if (move.target === 'all' || move.target === 'foeSide' || move.target === 'allySide' || move.target === 'allyTeam') {
+				if (move.target === 'all') {
+					hitResult = this.battle.runEvent('TryHitField', target, pokemon, move);
+				} else {
+					hitResult = this.battle.runEvent('TryHitSide', target, pokemon, move);
+				}
+				if (!hitResult) {
+					if (hitResult === false) {
+						this.battle.add('-fail', pokemon);
+						this.battle.attrLastMove('[still]');
+					}
+					return false;
+				}
+				return this.moveHit(target, pokemon, move);
+			}
+
 			hitResult = this.battle.runEvent('Invulnerability', target, pokemon, move);
 			if (hitResult === false) {
-				if (!move.spreadHit) this.battle.attrLastMove('[miss]');
+				this.battle.attrLastMove('[miss]');
 				this.battle.add('-miss', pokemon);
 				return false;
 			}
@@ -106,10 +122,7 @@ export const Scripts: ModdedBattleScriptsData = {
 				move.ignoreImmunity = (move.category === 'Status');
 			}
 
-			if (
-				(!move.ignoreImmunity || (move.ignoreImmunity !== true && !move.ignoreImmunity[move.type])) &&
-				!target.runImmunity(move.type, true)
-			) {
+			if (!target.runImmunity(move, true)) {
 				return false;
 			}
 
@@ -195,7 +208,7 @@ export const Scripts: ModdedBattleScriptsData = {
 				for (i = 0; i < hits && target.hp && pokemon.hp; i++) {
 					if (pokemon.status === 'slp' && !isSleepUsable) break;
 					move.hit = i + 1;
-					if (move.hit === hits) move.lastHit = true;
+					move.lastHit = move.hit === hits;
 					moveDamage = this.moveHit(target, pokemon, move);
 					if (moveDamage === false) break;
 					if (nullDamage && (moveDamage || moveDamage === 0 || moveDamage === undefined)) nullDamage = false;
@@ -215,25 +228,17 @@ export const Scripts: ModdedBattleScriptsData = {
 			}
 			if (move.ohko) this.battle.add('-ohko');
 
-			if (!move.negateSecondary) {
-				this.battle.singleEvent('AfterMoveSecondary', move, null, target, pokemon, move);
-				this.battle.runEvent('AfterMoveSecondary', target, pokemon, move);
-			}
+			this.battle.singleEvent('AfterMoveSecondary', move, null, target, pokemon, move);
+			this.battle.runEvent('AfterMoveSecondary', target, pokemon, move);
 			// Implementing Recoil mechanics from Stadium 2.
 			// If a pokemon caused the other to faint with a recoil move and only one pokemon remains on both sides,
 			// recoil damage will not be taken.
-			if (
-				move.recoil && move.totalDamage &&
-				(
-					target.alliesAndSelf().filter(foe => !foe.status).length > 1 ||
-					target.hp > 0 || pokemon.alliesAndSelf().filter(ally => !ally.status).length > 1
-				)
-			) {
-				this.battle.damage(this.calcRecoilDamage(move.totalDamage, move), pokemon, target, 'recoil');
+			if (move.recoil && move.totalDamage && (pokemon.side.pokemonLeft > 1 || target.side.pokemonLeft > 1 || target.hp)) {
+				this.battle.damage(this.calcRecoilDamage(move.totalDamage, move, pokemon), pokemon, target, 'recoil');
 			}
 			return damage;
 		},
-		getDamage(pokemon, target, move, suppressMessages) {
+		getDamage(source, target, move, suppressMessages) {
 			// First of all, we get the move.
 			if (typeof move === 'string') {
 				move = this.dex.getActiveMove(move);
@@ -248,10 +253,8 @@ export const Scripts: ModdedBattleScriptsData = {
 			}
 
 			// Let's test for immunities.
-			if (!move.ignoreImmunity || (move.ignoreImmunity !== true && !move.ignoreImmunity[move.type])) {
-				if (!target.runImmunity(move.type, true)) {
-					return false;
-				}
+			if (!target.runImmunity(move, true)) {
+				return false;
 			}
 
 			// Is it an OHKO move?
@@ -261,12 +264,12 @@ export const Scripts: ModdedBattleScriptsData = {
 
 			// We edit the damage through move's damage callback
 			if (move.damageCallback) {
-				return move.damageCallback.call(this.battle, pokemon, target);
+				return move.damageCallback.call(this.battle, source, target);
 			}
 
 			// We take damage from damage=level moves
 			if (move.damage === 'level') {
-				return pokemon.level;
+				return source.level;
 			}
 
 			// If there's a fix move damage, we run it
@@ -276,7 +279,6 @@ export const Scripts: ModdedBattleScriptsData = {
 
 			// We check the category and typing to calculate later on the damage
 			move.category = this.battle.getCategory(move);
-			if (!move.defensiveCategory) move.defensiveCategory = move.category;
 			// '???' is typeless damage: used for Struggle and Confusion etc
 			if (!move.type) move.type = '???';
 			const type = move.type;
@@ -284,7 +286,7 @@ export const Scripts: ModdedBattleScriptsData = {
 			// We get the base power and apply basePowerCallback if necessary
 			let basePower: number | false | null | undefined = move.basePower;
 			if (move.basePowerCallback) {
-				basePower = move.basePowerCallback.call(this.battle, pokemon, target, move);
+				basePower = move.basePowerCallback.call(this.battle, source, target, move);
 			}
 
 			// We check for Base Power
@@ -295,7 +297,7 @@ export const Scripts: ModdedBattleScriptsData = {
 			basePower = this.battle.clampIntRange(basePower, 1);
 
 			// Checking for the move's Critical Hit ratio
-			let critRatio = this.battle.runEvent('ModifyCritRatio', pokemon, target, move, move.critRatio || 0);
+			let critRatio = this.battle.runEvent('ModifyCritRatio', source, target, move, move.critRatio || 0);
 			critRatio = this.battle.clampIntRange(critRatio, 0, 5);
 			const critMult = [0, 16, 8, 4, 3, 2];
 			let isCrit = move.willCrit || false;
@@ -314,10 +316,10 @@ export const Scripts: ModdedBattleScriptsData = {
 				// confusion damage
 				if (move.isConfusionSelfHit) {
 					move.type = move.baseMoveType!;
-					basePower = this.battle.runEvent('BasePower', pokemon, target, move, basePower, true);
+					basePower = this.battle.runEvent('BasePower', source, target, move, basePower, true);
 					move.type = '???';
 				} else {
-					basePower = this.battle.runEvent('BasePower', pokemon, target, move, basePower, true);
+					basePower = this.battle.runEvent('BasePower', source, target, move, basePower, true);
 				}
 				if (basePower && move.basePowerModifier) {
 					basePower *= move.basePowerModifier;
@@ -327,20 +329,21 @@ export const Scripts: ModdedBattleScriptsData = {
 			basePower = this.battle.clampIntRange(basePower, 1);
 
 			// We now check for attacker and defender
-			let level = pokemon.level;
+			let level = source.level;
 
 			// Using Beat Up
 			if (move.allies) {
-				this.battle.add('-activate', pokemon, 'move: Beat Up', '[of] ' + move.allies[0].name);
+				this.battle.add('-activate', source, 'move: Beat Up', '[of] ' + move.allies[0].name);
 				level = move.allies[0].level;
 			}
 
-			let attacker = pokemon;
-			const defender = target;
-			if (move.useTargetOffensive) attacker = target;
-			let atkType: StatIDExceptHP = (move.category === 'Physical') ? 'atk' : 'spa';
-			const defType: StatIDExceptHP = (move.defensiveCategory === 'Physical') ? 'def' : 'spd';
-			if (move.useSourceDefensiveAsOffensive) atkType = defType;
+			const attacker = move.overrideOffensivePokemon === 'target' ? target : source;
+			const defender = move.overrideDefensivePokemon === 'source' ? source : target;
+
+			const isPhysical = move.category === 'Physical';
+			const atkType: StatIDExceptHP = move.overrideOffensiveStat || (isPhysical ? 'atk' : 'spa');
+			const defType: StatIDExceptHP = move.overrideDefensiveStat || (isPhysical ? 'def' : 'spd');
+
 			let unboosted = false;
 			let noburndrop = false;
 
@@ -353,7 +356,7 @@ export const Scripts: ModdedBattleScriptsData = {
 					noburndrop = true;
 				}
 			}
-			// Get stats now.
+
 			let attack = attacker.getStat(atkType, unboosted, noburndrop);
 			let defense = defender.getStat(defType, unboosted);
 
@@ -370,6 +373,7 @@ export const Scripts: ModdedBattleScriptsData = {
 				// The attack drop from the burn is only applied when attacker's attack level is higher than defender's defense level.
 				attack = attacker.getStat(atkType, true, true);
 			}
+
 			if (move.ignoreDefensive) {
 				this.battle.debug('Negating (sp)def boost/penalty.');
 				defense = target.getStat(defType, true, true);
@@ -413,7 +417,7 @@ export const Scripts: ModdedBattleScriptsData = {
 			}
 
 			// STAB damage bonus, the "???" type never gets STAB
-			if (type !== '???' && pokemon.hasType(type)) {
+			if (type !== '???' && source.hasType(type)) {
 				damage += Math.floor(damage / 2);
 			}
 
@@ -436,7 +440,7 @@ export const Scripts: ModdedBattleScriptsData = {
 				}
 			}
 
-			// Apply random factor is damage is greater than 1, except for Flail and Reversal
+			// Apply random factor if damage is greater than 1, except for Flail and Reversal
 			if (!move.noDamageVariance && damage > 1) {
 				damage *= this.battle.random(217, 256);
 				damage = Math.floor(damage / 255);
@@ -467,14 +471,19 @@ export const Scripts: ModdedBattleScriptsData = {
 		if (typeof effect === 'string') effect = this.dex.conditions.get(effect);
 		if (!target?.hp) return 0;
 		let success = null;
-		boost = this.runEvent('Boost', target, source, effect, {...boost});
+		boost = this.runEvent('TryBoost', target, source, effect, { ...boost });
 		let i: BoostID;
 		for (i in boost) {
 			const currentBoost: SparseBoostsTable = {};
 			currentBoost[i] = boost[i];
-			if (boost[i] !== 0 && target.boostBy(currentBoost)) {
+			let boostBy = target.boostBy(currentBoost);
+			let msg = '-boost';
+			if (boost[i]! < 0) {
+				msg = '-unboost';
+				boostBy = -boostBy;
+			}
+			if (boostBy) {
 				success = true;
-				const msg = '-boost';
 				// Check for boost increases deleting attack or speed drops
 				if (i === 'atk' && target.status === 'brn' && target.volatiles['brnattackdrop']) {
 					target.removeVolatile('brnattackdrop');
@@ -483,9 +492,9 @@ export const Scripts: ModdedBattleScriptsData = {
 					target.removeVolatile('parspeeddrop');
 				}
 				if (!effect || effect.effectType === 'Move') {
-					this.add(msg, target, i, boost[i]);
+					this.add(msg, target, i, boostBy);
 				} else {
-					this.add(msg, target, i, boost[i], '[from] ' + effect.fullname);
+					this.add(msg, target, i, boostBy, '[from] ' + effect.fullname);
 				}
 				this.runEvent('AfterEachBoost', target, source, effect, currentBoost);
 			}
@@ -514,6 +523,7 @@ export const Scripts: ModdedBattleScriptsData = {
 				this.runEvent('BeforeFaint', pokemon, faintData.source, faintData.effect)) {
 				this.add('faint', pokemon);
 				pokemon.side.pokemonLeft--;
+				if (pokemon.side.totalFainted < 100) pokemon.side.totalFainted++;
 				this.runEvent('Faint', pokemon, faintData.source, faintData.effect);
 				this.singleEvent('End', pokemon.getAbility(), pokemon.abilityState, pokemon);
 				pokemon.clearVolatile(false);
@@ -528,6 +538,14 @@ export const Scripts: ModdedBattleScriptsData = {
 			// in gen 1, fainting skips the rest of the turn
 			// residuals don't exist in gen 1
 			this.queue.clear();
+			// Fainting clears accumulated Bide damage
+			for (const pokemon of this.getAllActive()) {
+				if (pokemon.volatiles['bide']?.damage) {
+					pokemon.volatiles['bide'].damage = 0;
+					this.hint("Desync Clause Mod activated!");
+					this.hint("In Gen 1, Bide's accumulated damage is reset to 0 when a Pokemon faints.");
+				}
+			}
 		} else if (this.gen <= 3 && this.gameType === 'singles') {
 			// in gen 3 or earlier, fainting in singles skips to residuals
 			for (const pokemon of this.getAllActive()) {

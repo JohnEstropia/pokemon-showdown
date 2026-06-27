@@ -8,13 +8,12 @@
  * under certain conditions and re-applied under other conditions.
  */
 
-export const Conditions: {[id: string]: ModdedConditionData} = {
+export const Conditions: import('../../../sim/dex-conditions').ModdedConditionDataTable = {
 	brn: {
 		name: 'brn',
 		effectType: 'Status',
 		onStart(target) {
 			this.add('-status', target, 'brn');
-			target.addVolatile('brnattackdrop');
 		},
 		onAfterMoveSelfPriority: 2,
 		onAfterMoveSelf(pokemon) {
@@ -23,9 +22,6 @@ export const Conditions: {[id: string]: ModdedConditionData} = {
 			if (pokemon.volatiles['residualdmg']) {
 				this.hint("In Gen 1, Toxic's counter is retained after Rest and applies to PSN/BRN.", true);
 			}
-		},
-		onSwitchIn(pokemon) {
-			pokemon.addVolatile('brnattackdrop');
 		},
 		onAfterSwitchInSelf(pokemon) {
 			this.damage(this.clampIntRange(Math.floor(pokemon.maxhp / 16), 1));
@@ -36,24 +32,22 @@ export const Conditions: {[id: string]: ModdedConditionData} = {
 		effectType: 'Status',
 		onStart(target) {
 			this.add('-status', target, 'par');
-			target.addVolatile('parspeeddrop');
 		},
 		onBeforeMovePriority: 2,
 		onBeforeMove(pokemon) {
 			if (this.randomChance(63, 256)) {
 				this.add('cant', pokemon, 'par');
 				pokemon.removeVolatile('bide');
-				pokemon.removeVolatile('twoturnmove');
-				pokemon.removeVolatile('fly');
-				pokemon.removeVolatile('dig');
-				pokemon.removeVolatile('solarbeam');
-				pokemon.removeVolatile('skullbash');
+				if (pokemon.removeVolatile('twoturnmove')) {
+					if (pokemon.volatiles['invulnerability']) {
+						this.hint(`In Gen 1, when a Dig/Fly user is fully paralyzed while semi-invulnerable, ` +
+							`it will remain semi-invulnerable until it switches out or fully executes Dig/Fly`, true);
+					}
+				}
 				pokemon.removeVolatile('partialtrappinglock');
+				pokemon.removeVolatile('lockedmove');
 				return false;
 			}
-		},
-		onSwitchIn(pokemon) {
-			pokemon.addVolatile('parspeeddrop');
 		},
 	},
 	slp: {
@@ -61,13 +55,17 @@ export const Conditions: {[id: string]: ModdedConditionData} = {
 		effectType: 'Status',
 		onStart(target, source, sourceEffect) {
 			if (sourceEffect && sourceEffect.effectType === 'Move') {
-				this.add('-status', target, 'slp', '[from] move: ' + sourceEffect.name);
+				this.add('-status', target, 'slp', `[from] move: ${sourceEffect.name}`);
 			} else {
 				this.add('-status', target, 'slp');
 			}
 			// 1-7 turns
 			this.effectState.startTime = this.random(1, 8);
 			this.effectState.time = this.effectState.startTime;
+
+			if (target.removeVolatile('nightmare')) {
+				this.add('-end', target, 'Nightmare', '[silent]');
+			}
 		},
 		onBeforeMovePriority: 10,
 		onBeforeMove(pokemon, target, move) {
@@ -78,8 +76,12 @@ export const Conditions: {[id: string]: ModdedConditionData} = {
 			pokemon.lastMove = null;
 			return false;
 		},
+		onAfterMoveSelfPriority: 3,
 		onAfterMoveSelf(pokemon) {
 			if (pokemon.statusState.time <= 0) pokemon.cureStatus();
+		},
+		onDisableMove(target) {
+			target.maybeLocked = false; // the player knows it is locked
 		},
 	},
 	frz: {
@@ -98,6 +100,9 @@ export const Conditions: {[id: string]: ModdedConditionData} = {
 			if (move.secondary && move.secondary.status === 'brn') {
 				target.cureStatus();
 			}
+		},
+		onDisableMove(target) {
+			target.maybeLocked = false; // the player knows it is locked
 		},
 	},
 	psn: {
@@ -151,20 +156,20 @@ export const Conditions: {[id: string]: ModdedConditionData} = {
 				this.directDamage(damage, pokemon, target);
 				pokemon.removeVolatile('bide');
 				pokemon.removeVolatile('twoturnmove');
-				pokemon.removeVolatile('fly');
-				pokemon.removeVolatile('dig');
-				pokemon.removeVolatile('solarbeam');
-				pokemon.removeVolatile('skullbash');
+				pokemon.removeVolatile('invulnerability');
 				pokemon.removeVolatile('partialtrappinglock');
+				pokemon.removeVolatile('lockedmove');
 				return false;
 			}
-			return;
 		},
 	},
 	flinch: {
 		name: 'flinch',
 		duration: 1,
-		onBeforeMovePriority: 4,
+		onStart(target) {
+			target.removeVolatile('mustrecharge');
+		},
+		onBeforeMovePriority: 8,
 		onBeforeMove(pokemon) {
 			if (!this.runEvent('Flinch', pokemon)) {
 				return;
@@ -186,79 +191,146 @@ export const Conditions: {[id: string]: ModdedConditionData} = {
 	},
 	partiallytrapped: {
 		name: 'partiallytrapped',
+		// this is the duration of Wrap if it doesn't continue.
+		// (i.e. if the attacker switches out.)
+		// the full duration is tracked in partialtrappinglock
 		duration: 2,
-		onBeforeMovePriority: 4,
+		// defender still takes PSN damage, etc
+		// TODO: research exact mechanics
+		onBeforeMovePriority: 9,
 		onBeforeMove(pokemon) {
 			this.add('cant', pokemon, 'partiallytrapped');
 			return false;
+		},
+		onRestart() {
+			this.effectState.duration = 2;
+		},
+		onAccuracy(accuracy, target, source, move) {
+			if (source === this.effectState.source) return true;
+		},
+		onDisableMovePriority: 1, // higher priority so it gets undone by frz, slp or Bide
+		onDisableMove(target) {
+			if (this.effectState.maybeLocked) {
+				target.maybeLocked = true;
+			}
+		},
+	},
+	fakepartiallytrapped: {
+		name: 'fakepartiallytrapped',
+		// Wrap ended this turn, but you don't know that
+		// until you try to use an attack
+		duration: 2,
+		onDisableMovePriority: 1, // higher priority so it gets undone by frz, slp or Bide
+		onDisableMove(target) {
+			target.maybeLocked = true;
 		},
 	},
 	partialtrappinglock: {
 		name: 'partialtrappinglock',
 		durationCallback() {
-			const duration = this.sample([2, 2, 2, 3, 3, 3, 4, 5]);
-			return duration;
-		},
-		onResidual(target) {
-			if (target.lastMove && target.lastMove.id === 'struggle' || target.status === 'slp') {
-				delete target.volatiles['partialtrappinglock'];
-			}
+			return this.sample([2, 2, 2, 3, 3, 3, 4, 5]);
 		},
 		onStart(target, source, effect) {
+			const foe = target.foes()[0];
+			if (!foe) return false;
+
 			this.effectState.move = effect.id;
+			this.effectState.totalDuration = this.effectState.duration!;
+			this.effectState.damage = this.lastDamage;
+			this.effectState.locked = foe;
+			foe.addVolatile('partiallytrapped', target, effect);
 		},
-		onDisableMove(pokemon) {
-			if (!pokemon.hasMove(this.effectState.move)) {
+		onBeforeMove(pokemon, target, move) {
+			if (target !== this.effectState.locked) {
+				pokemon.removeVolatile('partialtrappinglock');
+			}
+		},
+		onAfterMove(pokemon, target, move) {
+			if (target && target.hp <= 0) {
+				delete pokemon.volatiles['partialtrappinglock'];
 				return;
 			}
-			for (const moveSlot of pokemon.moveSlots) {
-				if (moveSlot.id !== this.effectState.move) {
-					pokemon.disableMove(moveSlot.id);
+			if (this.effectState.duration === 1) {
+				if (this.effectState.totalDuration !== 5) {
+					pokemon.addVolatile('fakepartiallytrapped');
+					pokemon.volatiles['fakepartiallytrapped'].counterpart = target;
+					target.addVolatile('fakepartiallytrapped');
+					target.volatiles['fakepartiallytrapped'].counterpart = pokemon;
 				}
+			} else {
+				target.addVolatile('partiallytrapped', pokemon, move);
+				if (this.effectState.totalDuration - this.effectState.duration! > 0) {
+					target.volatiles['partiallytrapped'].maybeLocked = true;
+				}
+			}
+		},
+		onSemiLockMove() {
+			return this.effectState.move;
+		},
+		onDisableMove(pokemon) {
+			if (this.effectState.totalDuration - this.effectState.duration! > 1) {
+				pokemon.maybeLocked = true;
 			}
 		},
 	},
 	mustrecharge: {
 		inherit: true,
 		duration: 0,
-		onStart() {},
+		onBeforeMovePriority: 7,
+		onStart: undefined, // no inherit
+		onAfterMove(pokemon, target, move) {
+			if (target && target.hp <= 0) {
+				delete pokemon.volatiles['mustrecharge'];
+				return;
+			}
+			this.add('-mustrecharge', pokemon);
+		},
 	},
 	lockedmove: {
-		// Outrage, Thrash, Petal Dance...
-		inherit: true,
-		durationCallback() {
-			return this.random(3, 5);
+		// Thrash and Petal Dance.
+		name: 'lockedmove',
+		onStart(target, source, effect) {
+			this.effectState.move = effect.id;
+			this.effectState.time = this.random(2, 4);
+			this.effectState.accuracy = 255;
 		},
-		onEnd(target) {
-			// Confusion begins even if already confused
-			delete target.volatiles['confusion'];
-			target.addVolatile('confusion');
+		onLockMove() {
+			return this.effectState.move;
+		},
+		onBeforeTurn(pokemon) {
+			const move = this.dex.moves.get(this.effectState.move);
+			if (move.id) {
+				this.debug('Forcing into ' + move.id);
+				this.queue.changeAction(pokemon, { choice: 'move', moveid: move.id });
+			}
+		},
+		onAfterMove(pokemon) {
+			if (pokemon.volatiles['lockedmove'].time <= 0) {
+				pokemon.removeVolatile('lockedmove');
+			}
 		},
 	},
-	stall: {
-		name: 'stall',
-		// Protect, Detect, Endure counter
-		duration: 2,
-		counterMax: 256,
-		onStart() {
-			this.effectState.counter = 2;
+	twoturnmove: {
+		// Skull Bash, Solar Beam, ...
+		name: 'twoturnmove',
+		onStart(attacker, defender, effect) {
+			// ("attacker" is the Pokemon using the two turn move and the Pokemon this condition is being applied to)
+			this.effectState.move = effect.id;
+			this.effectState.sourceEffect = effect.sourceEffect;
+			this.attrLastMove('[still]');
 		},
-		onStallMove() {
-			// this.effectState.counter should never be undefined here.
-			// However, just in case, use 1 if it is undefined.
-			const counter = this.effectState.counter || 1;
-			if (counter >= 256) {
-				// 2^32 - special-cased because Battle.random(n) can't handle n > 2^16 - 1
-				return (this.random() * 4294967296 < 1);
-			}
-			this.debug("Success chance: " + Math.round(100 / counter) + "%");
-			return this.randomChance(1, counter);
+		onLockMove() {
+			return this.effectState.move;
 		},
-		onRestart() {
-			if (this.effectState.counter < (this.effect as Condition).counterMax!) {
-				this.effectState.counter *= 2;
-			}
-			this.effectState.duration = 2;
+	},
+	invulnerability: {
+		// Dig/Fly
+		name: 'invulnerability',
+		onInvulnerability(target, source, move) {
+			if (target === source) return true;
+			if (move.id === 'swift' || move.id === 'transform') return true;
+			this.add('-message', 'The foe ' + target.name + ' can\'t be hit while invulnerable!');
+			return false;
 		},
 	},
 };

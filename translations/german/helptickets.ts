@@ -1,4 +1,4 @@
-import type {Translations} from '../../server/chat';
+import type { Translations } from '../../server/chat';
 
 export const translations: Translations = {
 	strings: {
@@ -82,7 +82,7 @@ export const translations: Translations = {
 		"Status": "Status",
 		"Creator": "Ersteller",
 		"Ticket Type": "Ticket-Typ",
-		"Language": "",
+		"Language": "Sprache",
 		"Claimed by": "Angenommen von",
 		"Action": "Aktion",
 		"And ${keys.length - count} more tickets.": "Und ${keys.length - count} weitere Tickets",

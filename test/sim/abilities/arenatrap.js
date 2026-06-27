@@ -5,23 +5,23 @@ const common = require('./../../common');
 
 let battle;
 
-describe('Arena Trap', function () {
-	afterEach(function () {
+describe('Arena Trap', () => {
+	afterEach(() => {
 		battle.destroy();
 	});
 
 	it('should prevent grounded Pokemon that are not immune to trapping from switching out normally', function () {
 		this.timeout(0);
-		battle = common.createBattle();
-		battle.setPlayer('p1', {team: [{species: "Dugtrio", ability: 'arenatrap', moves: ['snore', 'telekinesis', 'gravity']}]});
-		battle.setPlayer('p2', {team: [
-			{species: "Tornadus", ability: 'defiant', moves: ['tailwind']},
-			{species: "Heatran", ability: 'flashfire', item: 'airballoon', moves: ['roar']},
-			{species: "Claydol", ability: 'levitate', moves: ['rest']},
-			{species: "Dusknoir", ability: 'frisk', moves: ['rest']},
-			{species: "Magnezone", ability: 'magnetpull', moves: ['magnetrise']},
-			{species: "Vaporeon", ability: 'waterabsorb', moves: ['roar']},
-		]});
+		battle = common.createBattle([[
+			{ species: "Dugtrio", ability: 'arenatrap', moves: ['snore', 'telekinesis', 'gravity'] },
+		], [
+			{ species: "Tornadus", ability: 'defiant', moves: ['tailwind'] },
+			{ species: "Heatran", ability: 'flashfire', item: 'airballoon', moves: ['roar'] },
+			{ species: "Claydol", ability: 'levitate', moves: ['rest'] },
+			{ species: "Dusknoir", ability: 'frisk', moves: ['rest'] },
+			{ species: "Magnezone", ability: 'magnetpull', moves: ['magnetrise'] },
+			{ species: "Vaporeon", ability: 'waterabsorb', moves: ['roar'] },
+		]]);
 		const p2active = battle.p2.active;
 		battle.makeChoices('move snore', 'switch 2');
 		assert.species(p2active[0], 'Heatran');

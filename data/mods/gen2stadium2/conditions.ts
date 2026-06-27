@@ -4,7 +4,7 @@
  * a volatile along with them to keep track of if their respective stat changes should be factored
  * in during stat calculations or not.
  */
-export const Conditions: {[k: string]: ModdedConditionData} = {
+export const Conditions: import('../../../sim/dex-conditions').ModdedConditionDataTable = {
 	brn: {
 		name: 'brn',
 		effectType: 'Status',
@@ -46,12 +46,16 @@ export const Conditions: {[k: string]: ModdedConditionData} = {
 		effectType: 'Status',
 		onStart(target, source, sourceEffect) {
 			if (sourceEffect && sourceEffect.effectType === 'Move') {
-				this.add('-status', target, 'slp', '[from] move: ' + sourceEffect.name);
+				this.add('-status', target, 'slp', `[from] move: ${sourceEffect.name}`);
 			} else {
 				this.add('-status', target, 'slp');
 			}
 			// 1-4 turns, guaranteed 1 turn of sleep.
 			this.effectState.time = this.random(2, 5);
+
+			if (target.removeVolatile('nightmare')) {
+				this.add('-end', target, 'Nightmare', '[silent]');
+			}
 		},
 		onBeforeMovePriority: 10,
 		onBeforeMove(pokemon, target, move) {

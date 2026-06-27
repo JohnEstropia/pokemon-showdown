@@ -9,7 +9,7 @@ interface TagData {
 	genericNumCol?: (thing: Species | Move | Item | Ability) => number;
 }
 
-export const Tags: {[id: string]: TagData} = {
+export const Tags: { [id: IDEntry]: TagData } = {
 	// Categories
 	// ----------
 	physical: {
@@ -34,17 +34,36 @@ export const Tags: {[id: string]: TagData} = {
 		name: "Mega",
 		speciesFilter: species => !!species.isMega,
 	},
+	gigantamax: {
+		name: "Gigantamax",
+		speciesFilter: species => !!species.placeholderFor,
+	},
 	mythical: {
 		name: "Mythical",
+		desc: "Legendaries usually only obtainable from events. Usually BST 600",
 		speciesFilter: species => species.tags.includes("Mythical"),
 	},
 	sublegendary: {
 		name: "Sub-Legendary",
+		desc: "Legendaries that aren't Restricted or Mythical. Usually BST 570 to 580.",
 		speciesFilter: species => species.tags.includes("Sub-Legendary"),
 	},
 	restrictedlegendary: {
 		name: "Restricted Legendary",
+		desc: "Officially called Special Pokémon. Legendaries restricted from most in-game formats. Usually BST at least 660.",
 		speciesFilter: species => species.tags.includes("Restricted Legendary"),
+	},
+	ultrabeast: {
+		name: "Ultra Beast",
+		speciesFilter: species => species.tags.includes("Ultra Beast"),
+	},
+	paradox: {
+		name: "Paradox",
+		speciesFilter: species => species.tags.includes("Paradox"),
+	},
+	pokestar: {
+		name: "Pokestar",
+		speciesFilter: species => species.tags.includes("Pokestar"),
 	},
 
 	// Move tags
@@ -115,7 +134,7 @@ export const Tags: {[id: string]: TagData} = {
 	bypasssubstitute: {
 		name: "Bypass Substitute",
 		desc: "Bypasses but does not break a Substitute.",
-		moveFilter: move => 'authentic' in move.flags,
+		moveFilter: move => 'bypasssub' in move.flags,
 	},
 	gmaxmove: {
 		name: "G-Max Move",
@@ -126,7 +145,7 @@ export const Tags: {[id: string]: TagData} = {
 	// -----
 	uber: {
 		name: "Uber",
-		speciesFilter: species => species.tier === 'Uber' || species.tier === '(Uber)' || species.tier === 'AG',
+		speciesFilter: species => species.tier === 'Uber' || species.tier === 'AG' || species.tier === '(AG)',
 	},
 	ou: {
 		name: "OU",
@@ -162,11 +181,15 @@ export const Tags: {[id: string]: TagData} = {
 	},
 	pu: {
 		name: "PU",
-		speciesFilter: species => species.tier === 'PU' || species.tier === '(NU)',
+		speciesFilter: species => species.tier === 'PU',
+	},
+	zubl: {
+		name: "ZUBL",
+		speciesFilter: species => species.tier === 'ZUBL',
 	},
 	zu: {
 		name: "ZU",
-		speciesFilter: species => species.tier === '(PU)',
+		speciesFilter: species => species.tier === 'ZU',
 	},
 	nfe: {
 		name: "NFE",
@@ -190,15 +213,7 @@ export const Tags: {[id: string]: TagData} = {
 	},
 	ag: {
 		name: "AG",
-		speciesFilter: species => species.tier === 'AG',
-	},
-	nduubl: {
-		name: "ND UUBL",
-		speciesFilter: species => [
-			'Aerodactyl-Mega', 'Azumarill', 'Blacephalon', 'Diancie-Mega', 'Gallade-Mega', 'Gardevoir-Mega', 'Gengar', 'Gyarados', 'Gyarados-Mega', 'Hawlucha',
-			'Heracross-Mega', 'Hoopa-Unbound', 'Hydreigon', 'Latias', 'Latias-Mega', 'Latios', 'Latios-Mega', 'Manaphy', 'Pinsir-Mega', 'Sableye-Mega',
-			'Slowbro-Mega', 'Thundurus', 'Thundurus-Therian', 'Venusaur-Mega', 'Xurkitree', 'Zapdos-Galar',
-		].includes(species.name),
+		speciesFilter: species => species.tier === 'AG' || species.tier === '(AG)',
 	},
 
 	// Doubles tiers
@@ -209,7 +224,7 @@ export const Tags: {[id: string]: TagData} = {
 	},
 	dou: {
 		name: "DOU",
-		speciesFilter: species => species.doublesTier === 'DOU',
+		speciesFilter: species => species.doublesTier === 'DOU' || species.doublesTier === '(DOU)',
 	},
 	dbl: {
 		name: "DBL",
@@ -224,33 +239,89 @@ export const Tags: {[id: string]: TagData} = {
 		speciesFilter: species => species.doublesTier === '(DUU)',
 	},
 
+	// Nat Dex tiers
+	// -------------
+	ndag: {
+		name: "ND AG",
+		speciesFilter: species => species.natDexTier === 'AG' || species.natDexTier === '(AG)',
+	},
+	nduber: {
+		name: "ND Uber",
+		speciesFilter: species => species.natDexTier === 'Uber',
+	},
+	ndou: {
+		name: "ND OU",
+		speciesFilter: species => species.natDexTier === 'OU' || species.natDexTier === '(OU)',
+	},
+	nduubl: {
+		name: "ND UUBL",
+		speciesFilter: species => species.natDexTier === 'UUBL',
+	},
+	nduu: {
+		name: "ND UU",
+		speciesFilter: species => species.natDexTier === 'UU',
+	},
+	ndrubl: {
+		name: "ND RUBL",
+		speciesFilter: species => species.natDexTier === 'RUBL',
+	},
+	ndru: {
+		name: "ND RU",
+		speciesFilter: species => species.natDexTier === 'RU',
+	},
+	ndnfe: {
+		name: "ND NFE",
+		speciesFilter: species => species.natDexTier === 'NFE',
+	},
+	ndlc: {
+		name: "ND LC",
+		speciesFilter: species => species.natDexTier === 'LC',
+	},
+
 	// Legality tags
 	past: {
 		name: "Past",
+		desc: "Obtainable in a past game, but not in this game.",
 		genericFilter: thing => thing.isNonstandard === 'Past',
+	},
+	truepast: {
+		name: "True Past",
+		desc: "Obtainable in a past game, but is not in this game's data at all, not even in Dexit placeholder form.",
+		genericFilter: thing => !!thing.tags?.includes("True Past"),
+	},
+	pastunobtainable: {
+		name: "Past Unobtainable",
+		desc: "Existed in game data in a past game, but was never obtainable.",
+		genericFilter: thing => !!thing.tags?.includes("Past Unobtainable"),
 	},
 	future: {
 		name: "Future",
+		desc: "Obtainable in a future game, but is not in this game's data at all.",
 		genericFilter: thing => thing.isNonstandard === 'Future',
 	},
 	lgpe: {
 		name: "LGPE",
+		desc: "Obtainable in Pokémon: Let's Go, Pikachu! or Let's Go, Eevee!, but not in this game.",
 		genericFilter: thing => thing.isNonstandard === 'LGPE',
 	},
 	unobtainable: {
 		name: "Unobtainable",
+		desc: "Exists in game data but not obtainable without hacking.",
 		genericFilter: thing => thing.isNonstandard === 'Unobtainable',
 	},
 	cap: {
 		name: "CAP",
-		speciesFilter: thing => thing.isNonstandard === 'CAP',
+		desc: "Made up for the Smogon Create-A-Pokemon project.",
+		genericFilter: thing => thing.isNonstandard === 'CAP',
 	},
 	custom: {
 		name: "Custom",
+		desc: "Made up for... something or other. I don't recommend using this, it's not tagged very consistently.",
 		genericFilter: thing => thing.isNonstandard === 'Custom',
 	},
 	nonexistent: {
 		name: "Nonexistent",
+		desc: "Does not exist in game data. Includes Past, Future, LGPE, CAP, and Custom.",
 		genericFilter: thing => !!thing.isNonstandard && thing.isNonstandard !== 'Unobtainable',
 	},
 

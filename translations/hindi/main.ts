@@ -1,4 +1,4 @@
-import type {Translations} from '../../server/chat';
+import type { Translations } from '../../server/chat';
 
 export const translations: Translations = {
 	name: "Hindi",
@@ -19,7 +19,7 @@ export const translations: Translations = {
 		"% <strong>Global Driver</strong> - The above, and they can also lock users and check for alts": "% <strong>वैश्विक Driver</strong> - ये लोग ऊपर की चीज़ें और उसके अलावा lock या alt भी जाँच सकते हैं",
 		"@ <strong>Global Moderator</strong> - The above, and they can globally ban users": "@ <strong>वैश्विक Moderator</strong> - ये लोग ऊपर की चीज़ें और उसके अलावा वैश्विक स्तर पे ban भी कर सकते हैं",
 		"* <strong>Global Bot</strong> - Like Moderator, but makes it clear that this user is a bot": "* <strong>वैश्विक Bot</strong> - Moderator जैसा पर केवल Bots के लिए",
-		"&amp; <strong>Global Administrator</strong> - They can do anything, like change what this message says and promote users globally": "&amp; <strong>वैश्विक Administrator</strong> - ये लोग कुछ भी कर सकते हैं, जैसे की इस सन्देश को बदलना",
+		"~ <strong>Global Administrator</strong> - They can do anything, like change what this message says and promote users globally": "~ <strong>वैश्विक Administrator</strong> - ये लोग कुछ भी कर सकते हैं, जैसे की इस सन्देश को बदलना",
 
 		"<strong>Room ranks</strong>": "<strong>रूम के पद</strong>",
 		"^ <strong>Prize Winner</strong> - They don't have any powers beyond a symbol.": "",
@@ -42,13 +42,14 @@ export const translations: Translations = {
 		"MODERATOR COMMANDS": "Moderators के कमांड",
 		"ADMIN COMMANDS": "Administrators के कमांड",
 
-		"(replace / with ! to broadcast. Broadcasting requires: + % @ # &)": "(प्रसारित करने के लिए / को ! से बदलें. प्रसारण के लिए आवश्यक पद: + % @ # &) ",
+		"(replace / with ! to broadcast. Broadcasting requires: + % @ # ~)": "(प्रसारित करने के लिए / को ! से बदलें. प्रसारण के लिए आवश्यक पद: + % @ # ~) ",
 
 		"<strong>Room punishments</strong>:": "<strong>Room के दंड</strong>:",
 		"<strong>warn</strong> - Displays a popup with the rules.": "<strong>warn</strong> - नियमों का एक popup दिखाता है.",
 		"<strong>mute</strong> - Mutes a user (makes them unable to talk) for 7 minutes.": "<strong>mute</strong> - 7 मिनटों के लिए उपयोगकर्ता को चुप (बातचीत में असमर्थ) करता है.",
 		"<strong>hourmute</strong> - Mutes a user for 60 minutes.": "<strong>hourmute</strong> - 60 मिनटों के लिए उपयोगकर्ता को चुप करता है.",
 		"<strong>ban</strong> - Bans a user (makes them unable to join the room) for 2 days.": "<strong>ban</strong> - 2 दिन के लिए उपयोगकर्ता को निष्कासित (room से जुड़ने में असमर्थ) करता है.",
+		"<strong>weekban</strong> - Bans a user from the room for a week.": "<strong>weekban</strong> - एक सप्ताह के लिए उपयोगकर्ता को निष्कासित (room से जुड़ने में असमर्थ) करता है.",
 		"<strong>blacklist</strong> - Bans a user for a year.": "<strong>blacklist</strong> - साल भर के लिए उपयोगकर्ता को निष्कासित करता है.",
 
 		"<strong>Global punishments</strong>:": "<strong>वैश्विक दंड</strong>:",
@@ -56,6 +57,12 @@ export const translations: Translations = {
 		"<strong>weeklock</strong> - Locks a user for a week.": "<strong>weeklock</strong> - एक सप्ताह के लिए उपयोगकर्ता को lock करता है.",
 		"<strong>namelock</strong> - Locks a user and prevents them from having a username for 2 days.": "<strong>namelock</strong> - उपभोगकर्ता को लॉक करे और 2 दिन के लिए वो नाम रखने से रोकता है.",
 		"<strong>globalban</strong> - Globally bans (makes them unable to connect and play games) for a week.": "<strong>globalban</strong> - एक सप्ताह के लिए वैश्विक तौर पे निष्कासित करता (connect और खेलने होने से रोकता) है.",
+
+		"<strong>Indefinite global punishments</strong>:": "<strong>अनिश्चितकालीन वैश्विक दंड</strong>:",
+		"<strong>permalock</strong> - Issued for repeated instances of bad behavior and is rarely the result of a single action. ": "<strong>permalock</strong> - लगातार बुरे व्यवहार के लिए मिलने वाला दंड. तीन माह तक किसी भी दुर्व्यवहार से दूर रहने के बाद ही इसे ",
+		'These can be appealed in the <a href="https://www.smogon.com/forums/threads/discipline-appeal-rules.3583479/">Discipline Appeal</a>': '<a href="https://www.smogon.com/forums/threads/discipline-appeal-rules.3583479/">Discipline Appeal</a> forum पर अपील कर सकते हैं.',
+		" forum after at least 3 months without incident.": "",
+		"<strong>permaban</strong> - Unappealable global ban typically issued for the most severe cases of offensive/inappropriate behavior.": "<strong>permaban</strong> - सबसे गंभीर मामलों के लिए मिला हुआ स्थाई निष्काशन. ये दंड अपील के लिए अयोग्य है.",
 
 		"<strong>Room drivers (%)</strong> can use:": "<strong>Room driver (%)</strong> उपयोग कर सकते हैं:",
 		"- /warn OR /k <em>username</em>: warn a user and show the Pok&eacute;mon Showdown rules": "- /warn या /k <em>username</em>: उपयोगकर्ता को चेतावनी दे और Pok&eacute;mon Showdown के नियम दिखाए",

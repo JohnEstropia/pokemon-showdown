@@ -46,8 +46,7 @@ The beginning of a battle will look something like this:
 > - `PLAYER` is `p1` or `p2`
 > - `PLAYER` may also be `p3` or `p4` in 4 player battles
 > - `USERNAME` is the username
-> - `AVATAR` is the player's avatar identifier (usually a number, but other
->    values can be used for custom avatars)
+> - `AVATAR` is the player's avatar
 > - `RATING` is the player's Elo rating in the format they're playing. This will only be displayed in rated battles and when the player is first introduced otherwise it's blank
 
 `|teamsize|PLAYER|NUMBER`
@@ -63,7 +62,7 @@ The beginning of a battle will look something like this:
 
 `|gen|GENNUM`
 
-> Generation number, from 1 to 7. Stadium counts as its respective gens;
+> Generation number, from 1 to 9. Stadium counts as its respective gens;
 > Let's Go counts as 7, and modded formats count as whatever gen they were
 > based on.
 
@@ -83,13 +82,13 @@ The beginning of a battle will look something like this:
 
 `|rule|RULE: DESCRIPTION`
 
-> Will appear multiple times, one for each 
+> Will appear multiple times, one for each rule.
 
-    |clearpoke
-    |poke|PLAYER|DETAILS|ITEM
-    |poke|PLAYER|DETAILS|ITEM
-    ...
-    |teampreview
+`|clearpoke`  
+`|poke|PLAYER|DETAILS|ITEM`  
+`|poke|PLAYER|DETAILS|ITEM`  
+...  
+`|teampreview`
 
 > These messages appear if you're playing a format that uses team previews.
 
@@ -156,7 +155,7 @@ The beginning of a battle will look something like this:
 `|t:|TIMESTAMP`
 
 > The current UNIX timestamp (the number of seconds since 1970) - useful for determining
-> when events occured in real time.
+> when events occurred in real time.
 
 ### Identifying Pokémon
 
@@ -203,13 +202,14 @@ Multi, player 1's perspective
 For example: `p1a: Sparky` could be a Charizard named Sparky.
 `p1: Dragonite` could be an inactive Dragonite being healed by Heal Bell.
 
-- `DETAILS` is a comma-separated list of all information about a pokemon
+- `DETAILS` is a comma-separated list of all information about a Pokemon
   visible on the battle screen: species, shininess, gender, and level. So it
-  starts with `SPECIES`, adding `, shiny` if it's shiny, `, M` if it's male,
-  `, F` if it's female, `, L##` if it's not level 100.
+  starts with `SPECIES`, adding `, L##` if it's not level 100, `M` if it's male,
+  `, F` if it's female, `, shiny` if it's shiny.
+  In Gen 9, `, tera:TYPE` will be appended if the Pokemon has Terastallized.
 
 So, for instance, `Deoxys-Speed` is a level 100 non-shiny genderless
-Deoxys (Speed forme). `Sawsbuck, shiny, F, L50` is a level 50 shiny female
+Deoxys (Speed forme). `Sawsbuck, L50, F, shiny` is a level 50 shiny female
 Sawsbuck (Spring form).
 
 In Team Preview, `DETAILS` will not include information not available in
@@ -315,7 +315,7 @@ stat boosts are minor actions.
 
 `|-fail|POKEMON|ACTION`
 
-> The specified `ACTION` has failed against the `POKEMON` targetted. The
+> The specified `ACTION` has failed against the `POKEMON` targeted. The
 > `ACTION` in question should be a move that fails due to its own mechanics.
 > Moves (or effect activations) that fail because they're blocked by another
 > effect should use `-block` instead.
@@ -434,6 +434,11 @@ stat boosts are minor actions.
 
 > Indicates that the field condition `CONDITION` has ended.
 
+`|-fieldactivate|CONDITION`
+
+> A single-event field effect `CONDITION` has triggered.
+> (i.e. Teatime, Electrify, Perish Song, extreme weather activation)
+
 `|-sidestart|SIDE|CONDITION`
 
 > A side condition `CONDITION` has started on `SIDE`. Side conditions are all
@@ -443,6 +448,10 @@ stat boosts are minor actions.
 `|-sideend|SIDE|CONDITION`
 
 > Indicates that the side condition `CONDITION` ended for the given `SIDE`.
+
+`|-swapsideconditions`
+
+> Swaps side conditions between sides. Used for Court Change.
 
 `|-start|POKEMON|EFFECT`
 
@@ -598,7 +607,7 @@ stat boosts are minor actions.
 `|-nothing`
 
 > **DEPRECATED**: A move did absolutely nothing. (For example: Splash). In the
-> future this will be of the form `|-activate||move:Splash`.
+> future this will be of the form `|-activate|POKEMON|move: Splash`.
 
 `|-hitcount|POKEMON|NUM`
 
@@ -682,6 +691,8 @@ To be exact, `CHOICE` is one of:
 - `move MOVESPEC zmove`, to use a z-move version of a move
 
 - `move MOVESPEC max`, to Dynamax/Gigantamax and make a move
+
+- `move MOVESPEC terastalize`, to Terastalize and make a move
 
 - `switch SWITCHSPEC`, to make a switch
 

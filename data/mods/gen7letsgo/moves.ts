@@ -1,4 +1,4 @@
-export const Moves: {[k: string]: ModdedMoveData} = {
+export const Moves: import('../../../sim/dex-moves').ModdedMoveDataTable = {
 	absorb: {
 		inherit: true,
 		basePower: 40,
@@ -19,6 +19,7 @@ export const Moves: {[k: string]: ModdedMoveData} = {
 	doubleironbash: {
 		inherit: true,
 		isNonstandard: null,
+		flags: { contact: 1, protect: 1, mirror: 1, punch: 1, minimize: 1 },
 	},
 	floatyfall: {
 		inherit: true,
@@ -39,10 +40,13 @@ export const Moves: {[k: string]: ModdedMoveData} = {
 	},
 	metronome: {
 		inherit: true,
-		onHit(target, source, effect) {
-			const moves = this.dex.moves.all().filter(
-				move => !move.realMove && move.gen === 1 && !effect.noMetronome!.includes(move.name)
-			);
+		desc: "A random move that was introduced in gen 1 is selected for use, other than Counter, Mimic, Mirror Move, Struggle, or Transform.",
+		shortDesc: "Picks a random move from gen 1.",
+		onHit(target) {
+			const moves = this.dex.moves.all().filter(move => (
+				(!move.isNonstandard || move.isNonstandard === 'Unobtainable') &&
+				move.flags['metronome'] && move.gen === 1
+			));
 			let randomMove = '';
 			if (moves.length) {
 				moves.sort((a, b) => a.num - b.num);
@@ -82,7 +86,9 @@ export const Moves: {[k: string]: ModdedMoveData} = {
 		shortDesc: "User switches out.",
 		priority: -6,
 		selfSwitch: true,
-		onTry: true,
+		onTry(source) {
+			return !!this.canSwitch(source.side);
+		},
 	},
 	zippyzap: {
 		inherit: true,

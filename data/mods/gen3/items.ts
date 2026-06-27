@@ -1,7 +1,7 @@
-export const Items: {[k: string]: ModdedItemData} = {
+export const Items: import('../../../sim/dex-items').ModdedItemDataTable = {
 	aguavberry: {
 		inherit: true,
-		onUpdate() {},
+		onUpdate: undefined, // no inherit
 		onResidualOrder: 10,
 		onResidualSubOrder: 4,
 		onResidual(pokemon) {
@@ -12,7 +12,7 @@ export const Items: {[k: string]: ModdedItemData} = {
 	},
 	apicotberry: {
 		inherit: true,
-		onUpdate() {},
+		onUpdate: undefined, // no inherit
 		onResidualOrder: 10,
 		onResidualSubOrder: 4,
 		onResidual(pokemon) {
@@ -23,12 +23,12 @@ export const Items: {[k: string]: ModdedItemData} = {
 	},
 	berryjuice: {
 		inherit: true,
-		onUpdate() {},
+		onUpdate: undefined, // no inherit
 		onResidualOrder: 10,
 		onResidualSubOrder: 4,
 		onResidual(pokemon) {
 			if (pokemon.hp <= pokemon.maxhp / 2) {
-				if (this.runEvent('TryHeal', pokemon) && pokemon.useItem()) {
+				if (this.runEvent('TryHeal', pokemon, null, this.effect, 20) && pokemon.useItem()) {
 					this.heal(20);
 				}
 			}
@@ -37,33 +37,41 @@ export const Items: {[k: string]: ModdedItemData} = {
 	},
 	blackbelt: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move && move.type === 'Fighting') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifyAtkPriority: 1,
+		onModifyAtk(atk, user, target, move) {
+			if (move?.type === 'Fighting') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
 	blackglasses: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move && move.type === 'Dark') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifySpAPriority: 1,
+		onModifySpA(spa, user, target, move) {
+			if (move?.type === 'Dark') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
 	charcoal: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move && move.type === 'Fire') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifySpAPriority: 1,
+		onModifySpA(spa, user, target, move) {
+			if (move?.type === 'Fire') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
 	dragonfang: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move && move.type === 'Dragon') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifySpAPriority: 1,
+		onModifySpA(spa, user, target, move) {
+			if (move?.type === 'Dragon') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
@@ -74,10 +82,15 @@ export const Items: {[k: string]: ModdedItemData} = {
 		num: 208,
 		gen: 3,
 		isNonstandard: "Unobtainable",
+		// No competitive use
+	},
+	fastball: {
+		inherit: true,
+		isNonstandard: "Unobtainable",
 	},
 	figyberry: {
 		inherit: true,
-		onUpdate() {},
+		onUpdate: undefined, // no inherit
 		onResidualOrder: 10,
 		onResidualSubOrder: 4,
 		onResidual(pokemon) {
@@ -88,7 +101,7 @@ export const Items: {[k: string]: ModdedItemData} = {
 	},
 	ganlonberry: {
 		inherit: true,
-		onUpdate() {},
+		onUpdate: undefined, // no inherit
 		onResidualOrder: 10,
 		onResidualSubOrder: 4,
 		onResidual(pokemon) {
@@ -99,15 +112,21 @@ export const Items: {[k: string]: ModdedItemData} = {
 	},
 	hardstone: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move && move.type === 'Rock') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifyAtkPriority: 1,
+		onModifyAtk(atk, user, target, move) {
+			if (move?.type === 'Rock') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
+	heavyball: {
+		inherit: true,
+		isNonstandard: "Unobtainable",
+	},
 	iapapaberry: {
 		inherit: true,
-		onUpdate() {},
+		onUpdate: undefined, // no inherit
 		onResidualOrder: 10,
 		onResidualSubOrder: 4,
 		onResidual(pokemon) {
@@ -120,8 +139,8 @@ export const Items: {[k: string]: ModdedItemData} = {
 		inherit: true,
 		onModifyMove(move) {
 			const affectedByKingsRock = [
-				'aerialace', 'aeroblast', 'aircutter', 'armthrust', 'barrage', 'beatup', 'bide', 'bind', 'blastburn', 'bonerush', 'bonemerang', 'bounce', 'brickbreak', 'bulletseed', 'clamp', 'cometpunch', 'crabhammer', 'crosschop', 'cut', 'dig', 'dive', 'doublekick', 'doubleslap', 'doubleedge', 'dragonbreath', 'dragonclaw', 'dragonrage', 'drillpeck', 'earthquake', 'eggbomb', 'endeavor', 'eruption', 'explosion', 'extremespeed', 'falseswipe', 'feintattack', 'firespin', 'flail', 'fly', 'frenzyplant', 'frustration', 'furyattack', 'furycutter', 'furyswipes', 'gust', 'hiddenpower', 'highjumpkick', 'hornattack', 'hydrocannon', 'hydropump', 'hyperbeam', 'iceball', 'iciclespear', 'jumpkick', 'karatechop', 'leafblade', 'lowkick', 'machpunch', 'magicalleaf', 'magnitude', 'megakick', 'megapunch', 'megahorn', 'meteormash', 'mudshot', 'muddywater', 'nightshade', 'outrage', 'overheat', 'payday', 'peck', 'petaldance', 'pinmissile', 'poisontail', 'pound', 'psychoboost', 'psywave', 'quickattack', 'rage', 'rapidspin', 'razorleaf', 'razorwind', 'return', 'revenge', 'reversal', 'rockblast', 'rockthrow', 'rollingkick', 'rollout', 'sandtomb', 'scratch', 'seismictoss', 'selfdestruct', 'shadowpunch', 'shockwave', 'signalbeam', 'silverwind', 'skullbash', 'skyattack', 'skyuppercut', 'slam', 'slash', 'snore', 'solarbeam', 'sonicboom', 'spikecannon', 'spitup', 'steelwing', 'strength', 'struggle', 'submission', 'surf', 'swift', 'tackle', 'takedown', 'thrash', 'tickle', 'triplekick', 'twister', 'uproar', 'visegrip', 'vinewhip', 'vitalthrow', 'volttackle', 'watergun', 'waterpulse', 'waterfall', 'weatherball', 'whirlpool', 'wingattack', 'wrap',
-			];
+				'aerialace', 'aeroblast', 'aircutter', 'armthrust', 'barrage', 'beatup', 'bide', 'bind', 'blastburn', 'bonerush', 'bonemerang', 'bounce', 'brickbreak', 'bulletseed', 'clamp', 'cometpunch', 'crabhammer', 'crosschop', 'cut', 'dig', 'dive', 'doublekick', 'doubleslap', 'doubleedge', 'dragonbreath', 'dragonclaw', 'dragonrage', 'drillpeck', 'earthquake', 'eggbomb', 'endeavor', 'eruption', 'explosion', 'extremespeed', 'falseswipe', 'feintattack', 'firespin', 'flail', 'fly', 'frenzyplant', 'frustration', 'furyattack', 'furycutter', 'furyswipes', 'gust', 'hiddenpower', 'highjumpkick', 'hornattack', 'hydrocannon', 'hydropump', 'hyperbeam', 'iceball', 'iciclespear', 'jumpkick', 'karatechop', 'leafblade', 'lowkick', 'machpunch', 'magicalleaf', 'magnitude', 'megakick', 'megapunch', 'megahorn', 'meteormash', 'mudshot', 'muddywater', 'nightshade', 'outrage', 'overheat', 'payday', 'peck', 'petaldance', 'pinmissile', 'poisontail', 'pound', 'psychoboost', 'psywave', 'quickattack', 'rage', 'rapidspin', 'razorleaf', 'razorwind', 'return', 'revenge', 'reversal', 'rockblast', 'rockthrow', 'rollingkick', 'rollout', 'sandtomb', 'scratch', 'seismictoss', 'selfdestruct', 'shadowpunch', 'shockwave', 'signalbeam', 'silverwind', 'skullbash', 'skyattack', 'skyuppercut', 'slam', 'slash', 'snore', 'solarbeam', 'sonicboom', 'spikecannon', 'spitup', 'steelwing', 'strength', 'struggle', 'submission', 'surf', 'swift', 'tackle', 'takedown', 'thrash', 'triplekick', 'twister', 'uproar', 'visegrip', 'vinewhip', 'vitalthrow', 'volttackle', 'watergun', 'waterpulse', 'waterfall', 'weatherball', 'whirlpool', 'wingattack', 'wrap',
+			]; // Tickle also has the move flag, but can never flinch because King's Rock requires damage to trigger
 			if (affectedByKingsRock.includes(move.id)) {
 				if (!move.secondaries) move.secondaries = [];
 				move.secondaries.push({
@@ -133,7 +152,7 @@ export const Items: {[k: string]: ModdedItemData} = {
 	},
 	lansatberry: {
 		inherit: true,
-		onUpdate() {},
+		onUpdate: undefined, // no inherit
 		onResidualOrder: 10,
 		onResidualSubOrder: 4,
 		onResidual(pokemon) {
@@ -150,9 +169,13 @@ export const Items: {[k: string]: ModdedItemData} = {
 			return accuracy * 0.95;
 		},
 	},
+	levelball: {
+		inherit: true,
+		isNonstandard: "Unobtainable",
+	},
 	liechiberry: {
 		inherit: true,
-		onUpdate() {},
+		onUpdate: undefined, // no inherit
 		onResidualOrder: 10,
 		onResidualSubOrder: 4,
 		onResidual(pokemon) {
@@ -163,19 +186,34 @@ export const Items: {[k: string]: ModdedItemData} = {
 	},
 	lightball: {
 		inherit: true,
-		onModifyAtk() {},
+		onModifySpA(spa, pokemon) {
+			if (pokemon.species.name === 'Pikachu') {
+				return this.chainModify(2);
+			}
+		},
+		onBasePower: undefined, // no inherit
+	},
+	loveball: {
+		inherit: true,
+		isNonstandard: "Unobtainable",
+	},
+	lureball: {
+		inherit: true,
+		isNonstandard: "Unobtainable",
 	},
 	magnet: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move.type === 'Electric') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifySpAPriority: 1,
+		onModifySpA(spa, user, target, move) {
+			if (move?.type === 'Electric') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
 	magoberry: {
 		inherit: true,
-		onUpdate() {},
+		onUpdate: undefined, // no inherit
 		onResidualOrder: 10,
 		onResidualSubOrder: 4,
 		onResidual(pokemon) {
@@ -186,39 +224,51 @@ export const Items: {[k: string]: ModdedItemData} = {
 	},
 	metalcoat: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move.type === 'Steel') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifyAtkPriority: 1,
+		onModifyAtk(atk, user, target, move) {
+			if (move?.type === 'Steel') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
 	miracleseed: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move.type === 'Grass') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifySpAPriority: 1,
+		onModifySpA(spa, user, target, move) {
+			if (move?.type === 'Grass') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
+	moonball: {
+		inherit: true,
+		isNonstandard: "Unobtainable",
+	},
 	mysticwater: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move.type === 'Water') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifySpAPriority: 1,
+		onModifySpA(spa, user, target, move) {
+			if (move?.type === 'Water') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
 	nevermeltice: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move.type === 'Ice') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifySpAPriority: 1,
+		onModifySpA(spa, user, target, move) {
+			if (move?.type === 'Ice') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
 	oranberry: {
 		inherit: true,
-		onUpdate() {},
+		onUpdate: undefined, // no inherit
 		onResidualOrder: 10,
 		onResidualSubOrder: 4,
 		onResidual(pokemon) {
@@ -229,7 +279,7 @@ export const Items: {[k: string]: ModdedItemData} = {
 	},
 	petayaberry: {
 		inherit: true,
-		onUpdate() {},
+		onUpdate: undefined, // no inherit
 		onResidualOrder: 10,
 		onResidualSubOrder: 4,
 		onResidual(pokemon) {
@@ -240,20 +290,22 @@ export const Items: {[k: string]: ModdedItemData} = {
 	},
 	poisonbarb: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move.type === 'Poison') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifyAtkPriority: 1,
+		onModifyAtk(atk, user, target, move) {
+			if (move?.type === 'Poison') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
 	quickclaw: {
 		inherit: true,
-		onFractionalPriority() {},
+		onFractionalPriority: undefined, // no inherit
 		// implemented in Pokemon#getActionSpeed()
 	},
 	salacberry: {
 		inherit: true,
-		onUpdate() {},
+		onUpdate: undefined, // no inherit
 		onResidualOrder: 10,
 		onResidualSubOrder: 4,
 		onResidual(pokemon) {
@@ -264,39 +316,47 @@ export const Items: {[k: string]: ModdedItemData} = {
 	},
 	seaincense: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move && move.type === 'Water') {
-				return basePower * 1.05;
+		onBasePower: undefined, // no inherit
+		onModifySpAPriority: 1,
+		onModifySpA(spa, user, target, move) {
+			if (move?.type === 'Water') {
+				return this.chainModify(1.05);
 			}
 		},
 	},
 	sharpbeak: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move && move.type === 'Flying') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifyAtkPriority: 1,
+		onModifyAtk(atk, user, target, move) {
+			if (move?.type === 'Flying') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
 	silkscarf: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move.type === 'Normal') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifyAtkPriority: 1,
+		onModifyAtk(atk, user, target, move) {
+			if (move?.type === 'Normal') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
 	silverpowder: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move.type === 'Bug') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifyAtkPriority: 1,
+		onModifyAtk(atk, user, target, move) {
+			if (move?.type === 'Bug') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
 	sitrusberry: {
 		inherit: true,
-		onUpdate() {},
+		onUpdate: undefined, // no inherit
 		onResidualOrder: 10,
 		onResidualSubOrder: 4,
 		onResidual(pokemon) {
@@ -310,23 +370,31 @@ export const Items: {[k: string]: ModdedItemData} = {
 	},
 	softsand: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move.type === 'Ground') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifyAtkPriority: 1,
+		onModifyAtk(atk, user, target, move) {
+			if (move?.type === 'Ground') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
 	spelltag: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move.type === 'Ghost') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifyAtkPriority: 1,
+		onModifyAtk(atk, user, target, move) {
+			if (move?.type === 'Ghost') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
+	sportball: {
+		inherit: true,
+		isNonstandard: "Unobtainable",
+	},
 	starfberry: {
 		inherit: true,
-		onUpdate() {},
+		onUpdate: undefined, // no inherit
 		onResidualOrder: 10,
 		onResidualSubOrder: 4,
 		onResidual(pokemon) {
@@ -337,15 +405,17 @@ export const Items: {[k: string]: ModdedItemData} = {
 	},
 	twistedspoon: {
 		inherit: true,
-		onBasePower(basePower, user, target, move) {
-			if (move.type === 'Psychic') {
-				return basePower * 1.1;
+		onBasePower: undefined, // no inherit
+		onModifySpAPriority: 1,
+		onModifySpA(spa, user, target, move) {
+			if (move?.type === 'Psychic') {
+				return this.chainModify(1.1);
 			}
 		},
 	},
 	wikiberry: {
 		inherit: true,
-		onUpdate() {},
+		onUpdate: undefined, // no inherit
 		onResidualOrder: 10,
 		onResidualSubOrder: 4,
 		onResidual(pokemon) {
