@@ -264,7 +264,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 		name: "[Gen 9 Champions] OU",
 		mod: 'champions',
 		ruleset: ['Standard'],
-		banlist: ['AG', 'Uber', 'Moody', 'Quick Claw', 'Baton Pass', 'Last Respects', 'Shed Tail'],
+		banlist: ['AG', 'Uber', 'Moody', 'Light Clay', 'Quick Claw', 'Baton Pass', 'Last Respects', 'Shed Tail'],
 	},
 	{
 		name: "[Gen 9 Champions] UU",
@@ -508,6 +508,66 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 		searchShow: false,
 		itemClauseDefault: true,
 		ruleset: ['Standard Draft'],
+	},
+	{
+		name: "[Gen 9 Champions] NatDex Draft",
+		mod: 'champions',
+		searchShow: false,
+		itemClauseDefault: true,
+		ruleset: ['Standard Draft', 'NatDex Mod'],
+		checkCanLearn(move, species, setSources, set) {
+			if (!this.ruleTable.has('natdexmod')) return this.checkCanLearn(move, species, setSources, set);
+			const TeamValidator: typeof import('../sim/team-validator').TeamValidator =
+				require('../sim/team-validator').TeamValidator;
+			const natDex = TeamValidator.get(`gen${this.gen}nationaldexag`).checkCanLearn(move, species, setSources, set);
+			if (!natDex) return natDex;
+			return this.checkCanLearn(move, species, setSources, set);
+		},
+		onValidateSet(set) {
+			if (!this.ruleTable.has('natdexmod')) return;
+			const species = this.dex.species.get(set.species);
+			let tier = species.tier;
+			if (tier === 'Illegal') tier = this.dex.mod('gen9').species.get(species.name).natDexTier;
+			if (tier === 'Illegal') {
+				if (this.ruleTable.has(`+pokemon:${species.id}`)) return;
+				return [`${set.name || set.species} does not exist in the National Dex.`];
+			}
+			const requireObtainable = this.ruleTable.has('obtainable');
+			if (requireObtainable) {
+				if (species.natDexTier === "Unreleased") {
+					const basePokemon = this.toID(species.baseSpecies);
+					if (this.ruleTable.has(`+pokemon:${species.id}`) || this.ruleTable.has(`+basepokemon:${basePokemon}`) ||
+						this.ruleTable.has('+pokemontag:unobtainable')) {
+						return;
+					}
+					return [`${set.name || set.species} does not exist in the National Dex.`];
+				}
+				for (const moveid of set.moves) {
+					const move = this.dex.moves.get(moveid);
+					if (move.isNonstandard === 'Unobtainable' && move.gen === this.dex.gen) {
+						if (this.ruleTable.has(`+move:${move.id}`)) continue;
+						const problem = `${set.name}'s move ${move.name} does not exist in the National Dex.`;
+						if (this.ruleTable.has('omunobtainablemoves')) {
+							const { outOfBattleSpecies } = this.getValidationSpecies(set);
+							if (!this.omCheckCanLearn(move, outOfBattleSpecies, this.allSources(outOfBattleSpecies), set, problem)) continue;
+						}
+						return [problem];
+					}
+				}
+			}
+			// Any item that was legal in Gen 7 (Normal Gem for example) should be usable
+			if (!set.item) return;
+			let item = this.dex.items.get(set.item);
+			let gen = this.dex.gen;
+			while (item.isNonstandard && gen >= 7) {
+				item = this.dex.forGen(gen).items.get(item.id);
+				gen--;
+			}
+			if (requireObtainable && item.isNonstandard) {
+				if (this.ruleTable.has(`+item:${item.id}`)) return;
+				return [`${set.name}'s item ${item.name} does not exist in Gen ${this.dex.gen}.`];
+			}
+		},
 	},
 	{
 		name: "[Gen 8] Draft",
@@ -951,7 +1011,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 				const natdex = this.ruleTable.has('natdexmod');
 				if (natdex && item.id !== 'ultranecroziumz') continue;
 				const species = this.dex.species.get(set.species);
-				if (species.isNonstandard && !this.ruleTable.has(`+pokemontag:${this.toID(species.isNonstandard)}`)) {
+				if (species.isNonstandard && !this.ruleTable.has(`+tag:${this.toID(species.isNonstandard)}`)) {
 					return [`${species.baseSpecies} does not exist in gen 9.`];
 				}
 				if (((item.itemUser?.includes(species.name) || item.forcedForme === species.name) &&
@@ -1128,13 +1188,13 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 		mod: 'gen9',
 		ruleset: ['Standard OMs', 'STABmons Move Legality', 'Sleep Moves Clause', 'Terastal Clause'],
 		banlist: [
-			'Arceus', 'Azumarill', 'Baxcalibur', 'Calyrex-Ice', 'Calyrex-Shadow', 'Chi-Yu', 'Chien-Pao', 'Deoxys-Normal', 'Deoxys-Attack', 'Dialga', 'Dialga-Origin', 'Dragapult',
-			'Dragonite', 'Enamorus-Incarnate', 'Eternatus', 'Flutter Mane', 'Garchomp', 'Giratina', 'Giratina-Origin', 'Gouging Fire', 'Groudon', 'Gyarados', 'Ho-Oh', 'Iron Bundle',
-			'Komala', 'Koraidon', 'Kyogre', 'Kyurem-Base', 'Kyurem-Black', 'Kyurem-White', 'Landorus-Incarnate', 'Lugia', 'Lunala', 'Magearna', 'Meloetta', 'Mewtwo', 'Miraidon',
-			'Necrozma-Dawn-Wings', 'Necrozma-Dusk-Mane', 'Ogerpon-Hearthflame', 'Ogerpon-Wellspring', 'Palkia', 'Palkia-Origin', 'Porygon-Z', 'Raging Bolt', 'Rayquaza', 'Reshiram',
-			'Roaring Moon', 'Shaymin-Sky', 'Solgaleo', 'Spectrier', 'Terapagos', 'Ting-Lu', 'Ursaluna', 'Ursaluna-Bloodmoon', 'Urshifu-Single-Strike', 'Urshifu-Rapid-Strike',
-			'Walking Wake', 'Zacian', 'Zacian-Crowned', 'Zamazenta-Crowned', 'Zekrom', 'Zoroark-Hisui', 'Arena Trap', 'Moody', 'Shadow Tag', 'Damp Rock', 'King\'s Rock', 'Razor Fang',
-			'Baton Pass', 'Last Respects', 'Shed Tail',
+			'Arceus', 'Azumarill', 'Baxcalibur', 'Basculegion-M', 'Calyrex-Ice', 'Calyrex-Shadow', 'Chi-Yu', 'Chien-Pao', 'Deoxys-Normal', 'Deoxys-Attack', 'Dialga', 'Dialga-Origin',
+			'Dragapult', 'Dragonite', 'Enamorus-Incarnate', 'Eternatus', 'Flutter Mane', 'Garchomp', 'Giratina', 'Giratina-Origin', 'Gouging Fire', 'Groudon', 'Gyarados', 'Ho-Oh',
+			'Iron Bundle', 'Komala', 'Koraidon', 'Kyogre', 'Kyurem-Base', 'Kyurem-Black', 'Kyurem-White', 'Landorus-Incarnate', 'Lugia', 'Lunala', 'Magearna', 'Meloetta', 'Mewtwo',
+			'Miraidon', 'Necrozma-Dawn-Wings', 'Necrozma-Dusk-Mane', 'Ogerpon-Hearthflame', 'Ogerpon-Wellspring', 'Palkia', 'Palkia-Origin', 'Porygon-Z', 'Raging Bolt', 'Rayquaza',
+			'Reshiram', 'Roaring Moon', 'Shaymin-Sky', 'Solgaleo', 'Spectrier', 'Terapagos', 'Thundurus-Therian', 'Ting-Lu', 'Ursaluna', 'Ursaluna-Bloodmoon', 'Urshifu-Single-Strike',
+			'Urshifu-Rapid-Strike', 'Walking Wake', 'Zacian', 'Zacian-Crowned', 'Zamazenta-Crowned', 'Zekrom', 'Zoroark-Hisui', 'Arena Trap', 'Moody', 'Shadow Tag', 'Damp Rock',
+			'King\'s Rock', 'Razor Fang', 'Baton Pass', 'Last Respects', 'Shed Tail',
 		],
 		restricted: [
 			'Astral Barrage', 'Belly Drum', 'Ceaseless Edge', 'Clangorous Soul', 'Combat Torque', 'Dire Claw', 'Dragon Energy', 'Electro Shot', 'Esper Wing', 'Extreme Speed', 'Fillet Away',
@@ -1310,7 +1370,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 			}
 			if (
 				allThings.some(y => effectFunctions.some(x => x.get(y).isNonstandard &&
-					!this.ruleTable.has(`+pokemontag:${this.toID(x.get(y).isNonstandard)}`)))
+					!this.ruleTable.has(`+tag:${this.toID(x.get(y).isNonstandard)}`)))
 			) {
 				return this.validateSet(set, teamHas);
 			}
@@ -1590,13 +1650,13 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 			if (Array.isArray(problems) && problems.length) return problems;
 			const crossNonstandard = (!this.ruleTable.has('natdexmod') && crossSpecies.isNonstandard === 'Past') ||
 				crossSpecies.isNonstandard === 'Future';
-			const crossIsCap = !this.ruleTable.has('+pokemontag:cap') && crossSpecies.isNonstandard === 'CAP';
+			const crossIsCap = !this.ruleTable.has('+tag:cap') && crossSpecies.isNonstandard === 'CAP';
 			if (!crossSpecies.exists || crossNonstandard || crossIsCap) return this.validateSet(set, teamHas);
 			const species = this.dex.species.get(set.species);
 			const check = this.checkSpecies(set, species, species, {});
 			if (check) return [check];
 			const nonstandard = !this.ruleTable.has('natdexmod') && species.isNonstandard === 'Past';
-			const isCap = !this.ruleTable.has('+pokemontag:cap') && species.isNonstandard === 'CAP';
+			const isCap = !this.ruleTable.has('+tag:cap') && species.isNonstandard === 'CAP';
 			if (!species.exists || nonstandard || isCap || species === crossSpecies) return this.validateSet(set, teamHas);
 			if (!species.nfe) return [`${species.name} cannot cross evolve because it doesn't evolve.`];
 			const crossIsUnreleased = (crossSpecies.tier === "Unreleased" && crossSpecies.isNonstandard === "Unobtainable" &&
@@ -2015,7 +2075,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 			if (!teamHas.abilityMap) {
 				teamHas.abilityMap = Object.create(null);
 				for (const pokemon of Dex.species.all()) {
-					if (pokemon.isNonstandard && !this.ruleTable.has(`+pokemontag:${this.toID(pokemon.isNonstandard)}`)) continue;
+					if (pokemon.isNonstandard && !this.ruleTable.has(`+tag:${this.toID(pokemon.isNonstandard)}`)) continue;
 					if (pokemon.battleOnly) continue;
 					if (this.ruleTable.isBannedSpecies(pokemon)) continue;
 
@@ -2035,7 +2095,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 
 			const species = this.dex.species.get(set.species);
 			if (!species.exists || species.num < 1) return [`The Pok\u00e9mon "${set.species}" does not exist.`];
-			if (species.isNonstandard && !this.ruleTable.has(`+pokemontag:${this.toID(species.isNonstandard)}`)) {
+			if (species.isNonstandard && !this.ruleTable.has(`+tag:${this.toID(species.isNonstandard)}`)) {
 				return [`${species.name} is not obtainable in Generation ${this.dex.gen}.`];
 			}
 
@@ -2389,7 +2449,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 						continue;
 					}
 					if (pokemove.isNonstandard &&
-						!(this.ruleTable.has(`+pokemontag:${this.toID(pokemove.isNonstandard)}`) ||
+						!(this.ruleTable.has(`+tag:${this.toID(pokemove.isNonstandard)}`) ||
 							this.ruleTable.has(`+pokemon:${pokemove.id}`) ||
 							this.ruleTable.has(`+basepokemon:${this.toID(pokemove.baseSpecies)}`))) {
 						problems.push(`${pokemove.isNonstandard} Pok\u00e9mon are not allowed to be used as Pokemoves.`);
@@ -3291,7 +3351,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 		onValidateSet(set, format, setHas, teamHas) {
 			if (set.item) {
 				const item = this.dex.items.get(set.item);
-				if (item.megaStone && !(this.ruleTable.has(`+item:${item.id}`) || this.ruleTable.has(`+pokemontag:mega`))) {
+				if (item.megaStone && !(this.ruleTable.has(`+item:${item.id}`) || this.ruleTable.has(`+tag:mega`))) {
 					return [`Mega Evolution is banned.`];
 				}
 				if (item.zMove && !(this.ruleTable.has(`+item:${item.id}`))) {
@@ -3523,7 +3583,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 			this.add('-message', `https://play.pokemonshowdown.com/petmods`);
 		},
 		onValidateSet(set) {
-			if (this.ruleTable.tagRules.includes("+pokemontag:cap")) {
+			if (this.ruleTable.has("+tag:cap")) {
 				const { tierSpecies } = this.getValidationSpecies(set);
 				if (tierSpecies.isNonstandard !== "CAP")
 					return [`${set.name || set.species} does not exist in Pet Mods Advent.`];
